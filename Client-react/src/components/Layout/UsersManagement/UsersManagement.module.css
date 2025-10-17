@@ -1,0 +1,67 @@
+/* Animación de fadeIn */
+.tabContent {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+
+
+/* Badges */
+.badge {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.badgeSuccess {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.badgeWarning {
+  background-color: #fff3e0;
+  color: #ef6c00;
+}
+
+.badgeGray {
+    background-color: #f5f5f5;
+    color: #616161;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Mensaje "no hay usuarios" */
+.noUsers {
+  text-align: center;
+  padding: 40px;
+  background: #f1f1f1;
+  border-radius: 10px;
+  color: #b0b0b0;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.noUsers i {
+  font-size: 3rem;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

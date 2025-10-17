@@ -1,0 +1,230 @@
+ header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background: linear-gradient(to right, #000000cc, #444444cc);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 5%;
+      z-index: 1000;
+      backdrop-filter: blur(8px);
+    }
+    header .logo {
+      color: #fff;
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    
+    /* NAVEGACIÓN MEJORADA */
+    nav ul {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 25px;
+    }
+    nav ul li {
+      position: relative;
+    }
+    nav ul li a {
+      color: #fff;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color .3s;
+      padding: 10px 0;
+      display: block;
+    }
+    nav ul li a:hover {color: var(--primary);}
+    
+    /* SUBMENÚ CORREGIDO - Añadido espacio para evitar que desaparezca */
+    nav ul li ul {
+      position: absolute;
+      top: 100%; /* Cambiado de 40px a 100% para que esté justo debajo del elemento padre */
+      left: 0;
+      background: #222;
+      padding: 15px 0;
+      border-radius: 8px;
+      min-width: 180px;
+      display: none;
+      flex-direction: column;
+      z-index: 1001; /* Asegurar que esté por encima de otros elementos */
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    /* Añadido espacio invisible para mantener el submenú visible al pasar el ratón */
+    nav ul li ul::before {
+      content: '';
+      position: absolute;
+      top: -10px; /* Espacio entre el menú principal y el submenú */
+      left: 0;
+      width: 100%;
+      height: 20px;
+      background: transparent;
+    }
+    
+    nav ul li:hover ul {display: flex;}
+    nav ul li ul li a {
+      padding: 8px 20px; 
+      display: block;
+      transition: all 0.3s;
+    }
+    nav ul li ul li a:hover {
+      background: rgba(255, 255, 255, 0.1);
+      padding-left: 25px;
+    }
+    
+    /* ICONOS DE USUARIO LOGEADO */
+    .user-actions {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    
+    .icon-with-badge {
+      position: relative;
+      color: #fff;
+      font-size: 1.3rem;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    
+    .icon-with-badge:hover {
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+    
+    .badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: var(--primary);
+      color: #000;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+    
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+      cursor: pointer;
+        position: relative; /* Añadido para contexto de posicionamiento */
+    }
+    
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+    
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #222;
+  border-radius: 8px;
+  padding: 10px 0;
+  min-width: 180px;
+  display: none;
+  flex-direction: column;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  z-index: 1001;
+}
+    .user-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -10px; /* Espacio entre el perfil y el submenú */
+  left: 0;
+  width: 100%;
+  height: 10px; /* Altura del área de transición */
+  background: transparent;
+}
+    .user-profile:hover .user-dropdown {
+      display: flex;
+    }
+    
+    .user-dropdown a {
+      color: #fff;
+      text-decoration: none;
+      padding: 10px 20px;
+      transition: all 0.3s;
+    }
+    
+    .user-dropdown a:hover {
+      background: rgba(255, 255, 255, 0.1);
+      padding-left: 25px;
+    }
+    
+    .auth-buttons a {
+      color: #fff;
+      text-decoration: none;
+      margin-left: 20px;
+      padding: 8px 20px;
+      border: 2px solid #fff;
+      border-radius: 20px;
+      transition: all .3s;
+    }
+    .auth-buttons a:hover {
+      background: var(--primary);
+      color: #000;
+      border-color: var(--primary);
+    }
+    /* HEADER PARA PERFIL*/
+.profile-hero {
+  width: 100%;
+  height: 300px;
+  background: url('https://media.timeout.com/images/105182190/image.jpg') center/cover no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;      /* necesario para el ::before */
+  margin-top: 70px;
+  padding: 20px;
+  overflow: hidden;        /* opcional */
+}
+
+/* Capa oscura solo para el fondo */
+.profile-hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4); /* 0.4 = 40% de opacidad */
+  z-index: 1; /* queda debajo del título */
+}
+
+.Titulo {
+  position: relative;
+  z-index: 2;
+  color: #ffffff;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(255,255,255,0.8),
+               0 0 20px rgba(255,255,255,0.6);
+}
+
+.icon-with-badge a {
+  color: white;           /* color normal */
+  text-decoration: none;  /* quita el subrayado */
+}
+
+.icon-with-badge a:hover {
+  color: #ff4d4d;         /* color de hover, pon el que tenías antes */
+}
+
