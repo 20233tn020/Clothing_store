@@ -14,6 +14,7 @@ import UsersManagement from './components/Layout/UsersManagement/UsersManagement
 import OrdersManagement from './components/Layout/OrdersManagement/OrdersManagement.jsx'
 import ProductManagement from './components/Layout/ProductManagement/ProductManagement.jsx'
 import ReportAnalyze from './components/Common/Dashboard/RportAnalyze.jsx'
+import Notifications from './components/Layout/notifications/notifications.jsx'
 export default function App() {
   return (
     <Routes>
@@ -32,6 +33,7 @@ export default function App() {
       <Route path='/OrdersManagement' element={<OrdersManagement/>}/>
       <Route path='/ProductManagement' element={<ProductManagement/>}/>
     <Route path='/ReportAnalyze' element={<ReportAnalyze/>}/>
+    <Route path='/Notifications' element={<Notifications/>}/>
        <Route path="*" element={<div>Página no encontrada</div>} />
     </Routes>
   )

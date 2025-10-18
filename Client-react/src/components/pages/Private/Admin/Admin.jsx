@@ -7,6 +7,7 @@ import UsersManagement from "../../../Layout/UsersManagement/UsersManagement";
 import OrdersManagement from "../../../Layout/OrdersManagement/OrdersManagement";
 import ProductManagement from "../../../Layout/ProductManagement/ProductManagement";
 import ReportAnalyze from "../../../Common/Dashboard/RportAnalyze";
+import Notifications from "../../../Layout/notifications/notifications";
 export default function Admin() {
   // Estado de pestaña activa
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -344,7 +345,62 @@ export default function Admin() {
     </div>
   
               </div>}
-          {activeTab === 'settings' && <div className={styles.tabContent}>Configuración...</div>}
+          {activeTab === 'settings' && <div className={styles.tabContent}>
+            <div className={styles.page_title}>
+              <h2>Configuración del Sistema</h2>
+            </div>
+            <div className={styles.settings_container}>
+              <div className={styles.settings_card}>
+                <div  className={styles.settings_title}>Información de la Tienda</div>
+                <form id="storeSettings">
+                  <div  className={styles.form_group}>
+                      <label  className={styles.form_label}>Nombre de la Tienda</label>
+                         <input type="text" className={styles.form_control} value="Fashion Luxe"
+                            readOnly // evita que se edite
+                            style={{ cursor: 'not-allowed' }} // cambia el cursor a prohibido
+                          />
+                  </div>
+                  <br />
+                  <div  className={styles.form_group}>
+                      <label  className={styles.form_label}>Email de la tienda </label>
+                         <input type="email" className={styles.form_control} value="FashionLuxe@gmail.com"
+                            readOnly // evita que se edite
+                            style={{ cursor: 'not-allowed' }} // cambia el cursor a prohibido
+                          />
+                  </div>
+                  <br />
+                  <div  className={styles.form_group}>
+                      <label  className={styles.form_label}>Teléfono</label>
+                         <input type="text" className={styles.form_control} value="7774658796"
+                            readOnly // evita que se edite
+                            style={{ cursor: 'not-allowed' }} // cambia el cursor a prohibido
+                          />
+                  </div>
+                  <br />
+                   <div  className={styles.form_group}>
+                      <label  className={styles.form_label}>Dirección</label>
+                         <input type="text" className={styles.form_control} value="Av. Principal #123, Ciudad, País"
+                            readOnly // evita que se edite
+                            style={{ cursor: 'not-allowed' }} // cambia el cursor a prohibido
+                          />
+                  </div>
+                </form>
+              </div>
+              <div className={styles.settings_card}>
+                <div className={styles.settings_title}>Configuracion de Notificaciones</div>
+                <Notifications/>
+
+                </div>
+              
+              
+              
+              
+              
+              
+              
+              
+          </div>  
+          </div>}
         </div>
       </div>
     </div>
