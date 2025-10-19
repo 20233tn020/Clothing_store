@@ -14,28 +14,39 @@ class User(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=get_uuid)  
 
     # Información personal (OBLIGATORIO para registro)
-    nombre = db.Column(db.String(50), nullable=False)
-    apellido = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)
+    Nombre = db.Column(db.String(50), nullable=False)
+    Apellido = db.Column(db.String(100), nullable=False)
+    Email = db.Column(db.String(150), unique=True, nullable=False)
+    Password = db.Column(db.String(255), nullable=False)
 
     #  FOTO DE PERFIL (guarda la ruta/URL)
-    foto_perfil = db.Column(db.String(255), nullable=True, default=None)
+    Foto_perfil = db.Column(db.String(255), nullable=True, default=None)
 
     # Información de contacto (OPCIONAL - mostrará NULL)
-    telefono = db.Column(db.String(20), nullable=True, default=None)
-    fecha_nacimiento = db.Column(db.Date, nullable=True, default=None)
-    genero = db.Column(db.String(10), nullable=True, default=None)
+    Telefono = db.Column(db.String(20), nullable=True, default=None)
+    Fecha_nacimiento = db.Column(db.Date, nullable=True, default=None)
+    Genero = db.Column(db.String(10), nullable=True, default=None)
 
     # Dirección (OPCIONAL - mostrará NULL)
-    direccion = db.Column(db.String(150), nullable=True, default=None)
-    ciudad = db.Column(db.String(100), nullable=True, default=None)
-    estado_provincia = db.Column(db.String(100), nullable=True, default=None)
-    codigo_postal = db.Column(db.String(10), nullable=True, default=None)
-    pais = db.Column(db.String(100), nullable=True, default=None)
-    tipo_direccion = db.Column(db.String(50), nullable=True, default=None)
+    Direccion = db.Column(db.String(150), nullable=True, default=None)
+    Ciudad = db.Column(db.String(100), nullable=True, default=None)
+    Estado_provincia = db.Column(db.String(100), nullable=True, default=None)
+    Codigo_postal = db.Column(db.String(10), nullable=True, default=None)
+    Pais = db.Column(db.String(100), nullable=True, default=None)
+    Tipo_direccion = db.Column(db.String(50), nullable=True, default=None)
 
     # Campos de auditoría
-    fecha_creacion = db.Column(db.DateTime, default=db.func.now())
-    fecha_actualizacion = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
-    activo = db.Column(db.Boolean, default=True)
+    Fecha_creacion = db.Column(db.DateTime, default=db.func.now())
+    Fecha_actualizacion = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+    Activo = db.Column(db.Boolean, default=True)
+
+class Admin(db.Model):
+    __tablename__ = "Admins"
+    id = db.Column(db.String(36), primary_key=True, default=get_uuid)
+    Nombre = db.Column(db.String(30), nullable=False)
+    Email = db.Column(db.String(40), nullable=False)
+    Password = db.Column(db.String(255), nullable=False)
+    Rol = db.Column(db.String(10), nullable=False)
+    Fecha_creacion = db.Column(db.DateTime, default=db.func.now())
+
+

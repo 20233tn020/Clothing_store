@@ -1,0 +1,35 @@
+18 de Octuble del 2025
+la 1 de la tarde :
+
+    SE IMPLEMENTO UN COMPONENTE DE NOTIFICACION PARA EL ADMIN CON REACT
+
+18 de Octubre del 2025
+la 9 de la noche:
+    Se Componente de contraseña y  se solucion de bug del checkbox(Solucionado)
+
+18 de Octubre del 2025
+
+las 10:02 de la noche
+    -Se creo UN API PARA EL LOGEO DE CRENDENCIALES DEL ADMINISTRADOR CON FLASK (Python)
+    -Se incripto las contraseñas para mayor seguridad con bycrpt(Flask)
+    -SE CREO LA TABLA DEL ADMINISTRADOR MEDIANTE PY (MySQL)
+ las 10:06 
+    PRUEBAS: 
+
+    prueba 1.0 : 
+    (Error 500) Fallo en el Servidor Evidencia(Prueba1.0)
+
+    prueba 1.1:
+    Se encontro un error en la sintaxis para validar el correo 
+    (Succeful) Se logro el consumo de API para el login del Administrador (prueba1.1")
+
+    Prueba 1.3 
+    (Succeful) Se logro la validacion del Email (Prueba1.3)
+
+    las 10:30:
+    - Se Modifico la API DE USUARIOS  para que validara junto con la tabla de Administradores
+    Prueba 2.0:
+    -Erro (500) Fallo en el servidor (prueba2.0)
+    las 10:40:
+    Prueba2.1:
+    (Succeful) Se implemento correctamente la API de User y Administrador y se logea correctamente(prueba2.1, prueba2.1.1)

@@ -1,5 +1,5 @@
 from flask import Flask,request, jsonify, session # <=  Jsonify es una función de Flask que convierte datos Python en respuestas JSON para APIs
-from models import db, User  # <= Aqui importamos lo que tenemos en model  la db y usuarios :> 
+from models import db, User, Admin  # <= Aqui importamos lo que tenemos en model  la db y usuarios :> 
 from flask_bcrypt import Bcrypt # <= PROTEGER CONTRASEÑAS de tus usuarios (las incripta)
 from flask_cors import CORS, cross_origin
 
@@ -65,47 +65,47 @@ def hello_world():
 def signup():
     # DATOS OBLIGATORIOS 
     data = request.json
-    nombre = data.get("nombre")
-    apellido = data.get("apellido")
-    email = data.get("email")
-    password = data.get("password")
+    Nombre = data.get("Nombre")
+    Apellido = data.get("Apellido")
+    Email = data.get("Email")
+    Password = data.get("Password")
     
     # DATOS OPCIONALES
-    telefono = data.get("telefono")
-    fecha_nacimiento = data.get("fecha_nacimiento")
-    genero = data.get("genero")
-    direccion = data.get("direccion")
-    ciudad = data.get("ciudad")
-    estado_provincia = data.get("estado_provincia")
-    codigo_postal = data.get("codigo_postal")
-    pais = data.get("pais")
-    tipo_direccion = data.get("tipo_direccion")
+    Telefono = data.get("Telefono")
+    Fecha_nacimiento = data.get("Fecha_nacimiento")
+    Genero = data.get("Genero")
+    Direccion = data.get("Direccion")
+    Ciudad = data.get("Ciudad")
+    Estado_provincia = data.get("Estado_provincia")
+    Codigo_postal = data.get("Codigo_postal")
+    Pais = data.get("Pais")
+    Tipo_direccion = data.get("Tipo_direccion")
 
     # VERIFICA SI EL USUARIO EXISTE
-    user_exists = User.query.filter_by(email=email).first() is not None
+    User_exists = User.query.filter_by(Email=Email).first() is not None
     
-    if user_exists:
+    if User_exists:
         return jsonify({"error": "Email already exists"}), 409
     
     # OCUPAMOS EL hash para incriptar las contraseñas 
-    hashed_password = bcrypt.generate_password_hash(password)
+    hashed_password = bcrypt.generate_password_hash(Password)
     
     #  CREAR USUARIO CON TODOS LOS CAMPOS
     new_user = User(
-        nombre=nombre,
-        apellido=apellido,
-        email=email, 
-        password=hashed_password,
+        Nombre=Nombre,
+        Apellido=Apellido,
+        Email=Email, 
+        Password=hashed_password,
         #  CAMPOS OPCIONALES
-        telefono=telefono,
-        fecha_nacimiento=fecha_nacimiento,
-        genero=genero,
-        direccion=direccion,
-        ciudad=ciudad,
-        estado_provincia=estado_provincia,
-        codigo_postal=codigo_postal,
-        pais=pais,
-        tipo_direccion=tipo_direccion
+        Telefono=Telefono,
+        Fecha_nacimiento=Fecha_nacimiento,
+        Genero=Genero,
+        Direccion=Direccion,
+        Ciudad=Ciudad,
+        Estado_provincia=Estado_provincia,
+        Codigo_postal=Codigo_postal,
+        Pais=Pais,
+        Tipo_direccion=Tipo_direccion
     )
     
     db.session.add(new_user)
@@ -116,46 +116,99 @@ def signup():
     #  DEVOLVER TODOS LOS DATOS DEL USUARIO
     return jsonify({
         "id": new_user.id,
-        "nombre": new_user.nombre,
-        "apellido": new_user.apellido,
-        "email": new_user.email,
-        "telefono": new_user.telefono,
-        "genero": new_user.genero,
-        "direccion": new_user.direccion,
-        "ciudad": new_user.ciudad
+        "nombre": new_user.Nombre,
+        "apellido": new_user.Apellido,
+        "email": new_user.Email,
+        "telefono": new_user.Telefono,
+        "genero": new_user.Genero,
+        "direccion": new_user.Direccion,
+        "ciudad": new_user.Ciudad
+    })
+
+
+@app.route("/Signup_Admin", methods =["POST"])
+def Signup_Admin():
+    # DATOS OBLIGATORIOS 
+    data = request.json
+    Nombre = data.get("Nombre")
+    Email = data.get("Email")
+    Password = data.get("Password")
+    Rol = data.get("Rol")
+    # VERIFICA SI EL USUARIO EXISTE
+    user_exists = Admin.query.filter_by(Email=Email).first() is not None
+    
+    if user_exists:
+        return jsonify({"error": "Email already exists"}), 409
+    
+    # OCUPAMOS EL hash para incriptar las contraseñas 
+    hashed_password = bcrypt.generate_password_hash(Password)
+    
+    #  CREAR USUARIO CON TODOS LOS CAMPOS
+    new_UserAdmin = Admin(
+        Nombre=Nombre,
+        Email=Email, 
+        Password=hashed_password,
+        Rol = Rol
+    )
+    db.session.add(new_UserAdmin)
+    db.session.commit()
+    session["Admin_id"] = new_UserAdmin.id
+
+    #  DEVOLVER TODOS LOS DATOS DEL USUARIO
+    return jsonify({
+        "id": new_UserAdmin.id,
+        "Nombre": new_UserAdmin.Nombre,
+        "email": new_UserAdmin.Email,
+        "Rol": new_UserAdmin.Rol
     })
 
 
 @app.route("/login", methods=["POST"])
-def login_user():
-    email = request.json["email"]
-    password = request.json["password"]
-    
-    # busca un usuario en la base de datos
-    user = User.query.filter_by(email=email).first()
-    
-    # Si no encontramos al usuario, rechaza el acceso
-    if user is None:
-        return jsonify({"error":"Unauthorized Access"}), 401
+def login():
+    data = request.json
+    Email = data.get("Email")
+    Password = data.get("Password")
 
-    # Si la contraseña no coincide, rechaza el acceso
-    if not bcrypt.check_password_hash(user.password, password):
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    # Guarda el ID del usuario en la sesión
-    session["user_id"] = user.id
+    if not Email or not Password:
+        return jsonify({"error": "Faltan campos"}), 400
 
-    #  DEVOLVER TODOS LOS DATOS DEL USUARIO
+    # Buscar primero en usuarios normales
+    user = User.query.filter_by(Email=Email).first()
+
+    user_type = None
+
+    # Si no hay usuario, buscar en admins
+    if not user:
+        user = Admin.query.filter_by(Email=Email).first()
+        if user:
+            user_type = "admin"
+        else:
+            return jsonify({"error": "Usuario no encontrado"}), 401
+    else:
+        user_type = "cliente"
+
+    # Obtener la contraseña (ambos modelos usan Password con mayúscula)
+    stored_password = user.Password
+
+    # Validar la contraseña con bcrypt
+    if not bcrypt.check_password_hash(stored_password, Password):
+        return jsonify({"error": "Contraseña incorrecta"}), 401
+
+    # Guardar sesión
+    if user_type == "admin":
+        session["admin_id"] = user.id
+    else:
+        session["user_id"] = user.id
+
+    # Devolver los datos del usuario
     return jsonify({
         "id": user.id,
-        "nombre": user.nombre,
-        "apellido": user.apellido,
-        "telefono":user.telefono,
-        "email": user.email,
-        "fecha_nacimiento": user.fecha_nacimiento,
-        "genero":user.genero,
-        "fecha_creacion":user.fecha_creacion,
-    })
+        "Nombre": user.Nombre,
+        "Email": user.Email,
+        "Rol": getattr(user, "Rol", "cliente"),  # Solo los admins tienen Rol
+        "Tipo": user_type,
+        "Fecha_creacion": str(user.Fecha_creacion)
+    }), 200
 
 if __name__ == "__main__":
     app.run(debug=True)
