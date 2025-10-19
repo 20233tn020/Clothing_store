@@ -10,16 +10,16 @@ export default function Notifications() {
 
       <div className={styles.checkbox_group}>
         <label>
-           <input type="checkbox"  /> Nuevos pedidos
+           <input type="checkbox" className={styles.Notify}  /> Nuevos pedidos
         </label>
         <label>
-          <input type="checkbox"  /> Pedidos cancelados
+          <input type="checkbox" className={styles.Notify}  /> Pedidos cancelados
         </label>
         <label>
-          <input type="checkbox" /> Productos con stock bajo
+          <input type="checkbox" className={styles.Notify} /> Productos con stock bajo
         </label>
         <label>
-          <input type="checkbox"  /> Nuevos usuarios registrados
+          <input type="checkbox"  className={styles.Notify} /> Nuevos usuarios registrados
         </label>
       </div>
     </div><br /><br />

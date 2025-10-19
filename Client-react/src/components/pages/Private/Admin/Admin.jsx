@@ -8,6 +8,7 @@ import OrdersManagement from "../../../Layout/OrdersManagement/OrdersManagement"
 import ProductManagement from "../../../Layout/ProductManagement/ProductManagement";
 import ReportAnalyze from "../../../Common/Dashboard/RportAnalyze";
 import Notifications from "../../../Layout/notifications/notifications";
+import { Update_Password } from "./Update_Password/Update_Password";
 export default function Admin() {
   // Estado de pestaña activa
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -389,8 +390,11 @@ export default function Admin() {
               <div className={styles.settings_card}>
                 <div className={styles.settings_title}>Configuracion de Notificaciones</div>
                 <Notifications/>
-
-                </div>
+              </div>
+              <div className={styles.settings_card}>
+                <div className={styles.settings_title}>Seguridad</div>
+              <Update_Password/>
+              </div>
               
               
               

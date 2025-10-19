@@ -15,6 +15,7 @@ import OrdersManagement from './components/Layout/OrdersManagement/OrdersManagem
 import ProductManagement from './components/Layout/ProductManagement/ProductManagement.jsx'
 import ReportAnalyze from './components/Common/Dashboard/RportAnalyze.jsx'
 import Notifications from './components/Layout/notifications/notifications.jsx'
+import { Update_Password } from './components/pages/Private/Admin/Update_Password/Update_Password.jsx'
 export default function App() {
   return (
     <Routes>
@@ -34,6 +35,7 @@ export default function App() {
       <Route path='/ProductManagement' element={<ProductManagement/>}/>
     <Route path='/ReportAnalyze' element={<ReportAnalyze/>}/>
     <Route path='/Notifications' element={<Notifications/>}/>
+    <Route path='/Update_Password' element={<Update_Password/>}/>
        <Route path="*" element={<div>Página no encontrada</div>} />
     </Routes>
   )
