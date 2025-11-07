@@ -33,3 +33,7 @@ las 10:02 de la noche
     las 10:40:
     Prueba2.1:
     (Succeful) Se implemento correctamente la API de User y Administrador y se logea correctamente(prueba2.1, prueba2.1.1)
+    ================================================================================
+    =========================================================================
+    =========================================================
+  

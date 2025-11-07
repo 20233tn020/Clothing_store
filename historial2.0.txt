@@ -1,0 +1,31 @@
+  ====================================
+    puedba 3.0 
+    _______________________________________________________________________________________________________________________
+    BUGS ENCONTRADOS
+    ______________________________________________________________________________________________________________________
+    -Error 
+        No se pudo validar las CRENDENCIALES en el login mediante React 11:20
+    solucion
+        Se Modifico la variables de validacion del login de "email "=>"Email" y de "password"=> "Password"
+    ______________________________________________________________________________________________________________________
+    -Error
+        No se pudo extraer los datos personales de los usuarios  11:30
+    solucion
+        Se Modifico la API de login para extraer los datos 11:41
+    ________________________________________________________________________________________________________________________   
+    -Error
+        No diriccionaba bien las paginas de los usuarios y Administradores  12:00
+    solucion   
+        Se Modifico La funcion de login en el archivo LoginForm.jsx 12:40
+============================================
+CREACION
+======================================================
+______________________________________________________________________________________________________________________ 
+Se creo una API  (("/logout", methods=["POST"])) para salir y detruir las sessiones completament para seguridad 
+______________________________________________________________________________________________________________________
+Se creo un archivo logoutLink de react (jsx) en la carpeta  src/completament/Auth/logout para salir la sessiones destruir por completo 
+______________________________________________________________________________________________________________________
+se creo el link del archivo  ogoutLink en la App.jsx
+______________________________________________________________________________________________________________________
+Se creo una nueva API para estraer todos los datos de los usuarios, para la interfaz del Administrador
+

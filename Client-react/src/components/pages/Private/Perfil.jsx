@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Header, Mi_Cuenta } from '../../Layout/header/Header';
 import { Footer } from '../../Layout/footer/Footer';
 import { FloatingWhatsApp } from '../../FloatingWhatsApp/FloatingWhatsApp';
+import LogoutLink from '../../Auth/logout/LogoutLink';
 import './Perfil.css';
 
 //importacion de la libreria para la foto de perfil
@@ -263,7 +264,7 @@ export default function Perfil() {
                 <i className="fas fa-bell"></i> Notificaciones
               </a>
             </li>
-            <li><a href="#"><i className="fas fa-sign-out-alt"></i> Cerrar Sesión</a></li>
+            <li><LogoutLink/></li>
           </ul>
         </div>
 
