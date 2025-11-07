@@ -2,30 +2,77 @@ import { useState, useEffect } from "react";
 import styles from "./UsersManagement.module.css";
 import clsx from "clsx";
 import Swal from "sweetalert2";
+import axios from "axios";
 import "animate.css";
 
 
 export default function UsersManagement() {
   const [users, setUsers] = useState([]);
 
-  // Simular carga de datos
+  // Cargar los usuarios desde Flask
   useEffect(() => {
-    const mockUsers = [
-      { id: "USR-001", name: "Christian", last_name: "Domingo Flores", email: "Chrs@gmail.com", password: "123456", phone: "7772161132",Fecha_Nacimiento:"08/09/2005",Genero :"Hombre",Direccion :"Calle Juárez 456",Ciudad :"Morelos",
-        Estado_Provincia :"Jalisco",CP:"123456",Pais:"Mexico",Fecha_Creacion:"12/10/2025",Fecha_Actualizacion:"12/10/2025", Estado: "Activo" },
-      { id: "USR-002", name: "Eder", last_name: "Peralta Jimenez", email: "eder@gmail.com", password: "987654", phone: "7775125385", Estado: "Inactivo" },
-      { id: "USR-003", name: "Diego", last_name: "Loza", email: "diego@gmail.com", password: "456123", phone: "7774567896", Estado: "Temporal" },
-    ];
-    setUsers(mockUsers);
+    axios.get("http://127.0.0.1:5000/users") // Ruta Flask
+      .then((response) => {
+        setUsers(response.data.users); // Flask devuelve {"users": [...]}
+      })
+      .catch((error) => {
+        console.error("Error al obtener usuarios:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Error al cargar usuarios",
+          text: "No se pudieron obtener los usuarios desde el servidor.",
+        });
+      });
   }, []);
 
+
+  // Función para formatear fecha
+function formatDate(dateString) {
+  if (!dateString) return 'N/A';
+  
+  try {
+    const date = new Date(dateString);
+    
+    // Verificar si la fecha es válida
+    if (isNaN(date.getTime())) return 'N/A';
+    
+    // Formato dd/mm/aaaa
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    
+    return `${day}/${month}/${year}`;
+  } catch (error) {
+    console.error('Error formateando fecha:', error);
+    return 'N/A';
+  }
+}
+
+// Función para formatear fecha en formato YYYY-MM-DD (para input type="date")
+function formatDateForInput(dateString) {
+  if (!dateString) return '';
+  
+  try {
+    const date = new Date(dateString);
+    
+    if (isNaN(date.getTime())) return '';
+    
+    return date.toISOString().split('T')[0];
+  } catch (error) {
+    console.error('Error formateando fecha para input:', error);
+    return '';
+  }
+}
   // Funciones de acción
- function showEditUserModal(id) {
-  const user = users.find(u => u.id === id);
-  if (!user) return;
+  function showEditUserModal(id) {
+  const user = users.find(u => String(u.id) === String(id));
+  if (!user) {
+    console.warn("Usuario no encontrado:", id);
+    return;
+  }
 
   Swal.fire({
-    title: `Editar Usuario: ${user.name}`,
+    title: `Editar Usuario: ${user.Nombre}`,
     html: `
       <div style="overflow-x: auto; max-width: 100%; white-space: nowrap;">
         <table style="min-width: 1200px; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 14px; width: 100%;">
@@ -46,23 +93,23 @@ export default function UsersManagement() {
             </tr>
             <tr>
               <td style="padding: 10px; border: 1px solid #ddd; background: white; position: sticky; left: 0; font-weight: bold;">Nombre</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.name}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${user.Nombre}</td>
               <td style="padding: 10px; border: 1px solid #ddd;">
-                <input type="text" value="${user.name}" class="swal2-input" id="edit-name" style="width: 90%;">
+                <input type="text" value="${user.Nombre}" class="swal2-input" id="edit-name" style="width: 90%;">
               </td>
             </tr>
             <tr>
               <td style="padding: 10px; border: 1px solid #ddd; background: white; position: sticky; left: 0; font-weight: bold;">Apellido</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.last_name}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${user.Apellido}</td>
               <td style="padding: 10px; border: 1px solid #ddd;">
-                <input type="text" value="${user.last_name}" class="swal2-input" id="edit-last_name" style="width: 90%;">
+                <input type="text" value="${user.Apellido}" class="swal2-input" id="edit-last_name" style="width: 90%;">
               </td>
             </tr>
             <tr>
               <td style="padding: 10px; border: 1px solid #ddd; background: white; position: sticky; left: 0; font-weight: bold;">Email</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.email}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${user.Email}</td>
               <td style="padding: 10px; border: 1px solid #ddd;">
-                <input type="email" value="${user.email}" class="swal2-input" id="edit-email" style="width: 90%;">
+                <input type="email" value="${user.Email}" class="swal2-input" id="edit-email" style="width: 90%;">
               </td>
             </tr>
             <tr>
@@ -74,16 +121,16 @@ export default function UsersManagement() {
             </tr>
             <tr>
               <td style="padding: 10px; border: 1px solid #ddd; background: white; position: sticky; left: 0; font-weight: bold;">Teléfono</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.phone}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${user.Telefono}</td>
               <td style="padding: 10px; border: 1px solid #ddd;">
-                <input type="text" value="${user.phone}" class="swal2-input" id="edit-phone" style="width: 90%;">
+                <input type="text" value="${user.Telefono}" class="swal2-input" id="edit-phone" style="width: 90%;">
               </td>
             </tr>
             <tr>
               <td style="padding: 10px; border: 1px solid #ddd; background: white; position: sticky; left: 0; font-weight: bold;">Fecha Nacimiento</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Fecha_Nacimiento || 'N/A'}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${formatDate(user.Fecha_nacimiento)}</td>
               <td style="padding: 10px; border: 1px solid #ddd;">
-                <input type="date" value="${user.Fecha_Nacimiento || ''}" class="swal2-input" id="edit-fecha_nacimiento" style="width: 90%;">
+                <input type="date" value="${user.Fecha_nacimiento || ''}" class="swal2-input" id="edit-fecha_nacimiento" style="width: 90%;">
               </td>
             </tr>
             <tr>
@@ -232,15 +279,18 @@ const confirmDeleteUser = (id) => {
 };
 
 function viewUser(id) {
-  const user = users.find(u => u.id === id);
-  if (!user) return;
+  const user = users.find(u => String(u.id) === String(id));
+  if (!user) {
+    console.warn("Usuario no encontrado:", id);
+    return;
+  }
 
   Swal.fire({
     background: "#f9f9f9",
     showClass: { popup: "animate__animated animate__fadeInDown" },
     hideClass: { popup: "animate__animated animate__fadeOutUp" },
     confirmButtonColor: "#3085d6",
-    title: `Detalles de ${user.name}`,
+    title: `Detalles de ${user.Nombre}`,
     html: `
       <div style="overflow-x: auto; max-width: 100%; white-space: nowrap;">
         <table style="min-width: 1200px; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 14px; width: 100%;">
@@ -267,21 +317,21 @@ function viewUser(id) {
           <tbody>
             <tr>
               <td style="padding: 10px; border: 1px solid #ddd; background: white; position: sticky; left: 0;">${user.id}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.name}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.last_name}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.email}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.password || '••••••'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.phone}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${user.Nombre}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${user.Apellido}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${user.Email}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${user.Password || '••••••'}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${user.Telefono}</td>
               <td style="padding: 10px; border: 1px solid #ddd;">${user.Fecha_Nacimiento || 'N/A'}</td>
               <td style="padding: 10px; border: 1px solid #ddd;">${user.Genero || 'N/A'}</td>
               <td style="padding: 10px; border: 1px solid #ddd;">${user.Direccion || 'N/A'}</td>
               <td style="padding: 10px; border: 1px solid #ddd;">${user.Ciudad || 'N/A'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Estado_Provincia || 'N/A'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.CP || 'N/A'}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${user.Estado_provincia || 'N/A'}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${user.Codigo_postal || 'N/A'}</td>
               <td style="padding: 10px; border: 1px solid #ddd;">${user.Pais || 'N/A'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Fecha_Creacion || 'N/A'}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${user.Fecha_creacion || 'N/A'}</td>
               <td style="padding: 10px; border: 1px solid #ddd;">${user.Fecha_Actualizacion || 'N/A'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Estado}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${user.Activo}</td>
             </tr>
           </tbody>
         </table>
@@ -299,7 +349,7 @@ function viewUser(id) {
     <div className={styles.container}>
       <h2>Gestión de Usuarios</h2>
 
-      {users.length === 0 ? (
+     {users.length === 0 ? (
         <div className={styles.noUsers}>
           <i className="fas fa-user-slash"></i>
           <p>No hay usuarios registrados</p>
@@ -322,23 +372,27 @@ function viewUser(id) {
             {users.map((user) => (
               <tr key={user.id}>
                 <td>#{user.id}</td>
-                <td>{user.name}</td>
-                <td>{user.last_name}</td>
-                <td>{user.email}</td>
-                <td>{user.password}</td>
-                <td>{user.phone}</td>
+                <td>{user.Nombre}</td>
+                <td>{user.Apellido}</td>
+                <td>{user.Email}</td>
+                <td>{user.Password|| '••••••'}</td>
+                <td>{user.Telefono}</td>
                 <td>
-                  <span
-                    className={clsx(
-                      styles.badge,
-                      user.Estado === "Activo"
-                        ? styles.badgeSuccess
-                        : user.Estado === "Inactivo"
-                        ? styles.badgeWarning
-                        : styles.badgeGray
-                    )}
-                  >
-                    {user.Estado}
+                    <span
+                      className={clsx(
+                        styles.badge,
+                        user.Activo == 1 || user.Activo === true
+                          ? styles.badgeSuccess
+                          : user.Activo == 0 || user.Activo === false
+                          ? styles.badgeWarning
+                          : styles.badgeGray
+                      )}
+                    >
+                    {user.Activo == 1 || user.Activo === true
+                      ? "Activo"
+                      : user.Activo == 0 || user.Activo === false
+                      ? "Inactivo"
+                      : "Desconocido"}
                   </span>
                 </td>
                 <td className={styles.actions}>

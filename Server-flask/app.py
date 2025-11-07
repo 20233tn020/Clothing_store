@@ -161,56 +161,143 @@ def Signup_Admin():
         "email": new_UserAdmin.Email,
         "Rol": new_UserAdmin.Rol
     })
-
-
 @app.route("/login", methods=["POST"])
 def login():
-    data = request.json
+    data = request.get_json()
+
+    # Validar campos requeridos
     Email = data.get("Email")
     Password = data.get("Password")
-
     if not Email or not Password:
-        return jsonify({"error": "Faltan campos"}), 400
+        return jsonify({"error": "Por favor, completa todos los campos."}), 400
 
-    # Buscar primero en usuarios normales
+    # Buscar primero en tabla de usuarios
     user = User.query.filter_by(Email=Email).first()
+    user_type = "cliente" if user else None
 
-    user_type = None
-
-    # Si no hay usuario, buscar en admins
+    # Si no existe en usuarios, buscar en administradores
     if not user:
         user = Admin.query.filter_by(Email=Email).first()
         if user:
             user_type = "admin"
-        else:
-            return jsonify({"error": "Usuario no encontrado"}), 401
-    else:
-        user_type = "cliente"
 
-    # Obtener la contraseña (ambos modelos usan Password con mayúscula)
-    stored_password = user.Password
+    # Si no se encontró en ninguna tabla
+    if not user:
+        return jsonify({"error": "El correo no está registrado."}), 404
 
-    # Validar la contraseña con bcrypt
-    if not bcrypt.check_password_hash(stored_password, Password):
-        return jsonify({"error": "Contraseña incorrecta"}), 401
+    # Verificar contraseña
+    if not bcrypt.check_password_hash(user.Password, Password):
+        return jsonify({"error": "Contraseña incorrecta."}), 401
 
     # Guardar sesión
+    session.clear()  # Limpiar sesiones previas
     if user_type == "admin":
         session["admin_id"] = user.id
     else:
         session["user_id"] = user.id
 
-    # Devolver los datos del usuario
-    return jsonify({
+    # Construir respuesta con TODOS los datos necesarios
+    response = {
         "id": user.id,
         "Nombre": user.Nombre,
         "Email": user.Email,
-        "Rol": getattr(user, "Rol", "cliente"),  # Solo los admins tienen Rol
         "Tipo": user_type,
-        "Fecha_creacion": str(user.Fecha_creacion)
+        "Fecha_creacion": str(user.Fecha_creacion),
+        "Activo": user.Activo if hasattr(user, 'Activo') else True
+    }
+
+    # Si es cliente, agregar todos los campos adicionales
+    if user_type == "cliente":
+        response.update({
+            "Apellido": user.Apellido,
+            "Telefono": user.Telefono,
+            "Fecha_nacimiento": str(user.Fecha_nacimiento) if user.Fecha_nacimiento else None,
+            "Genero": user.Genero,
+            "Direccion": user.Direccion,
+            "Ciudad": user.Ciudad,
+            "Estado_provincia": user.Estado_provincia,
+            "Codigo_postal": user.Codigo_postal,
+            "Pais": user.Pais,
+            "Tipo_direccion": user.Tipo_direccion
+        })
+    # Si es admin, agregar el rol
+    else:
+        response["Rol"] = user.Rol
+
+    return jsonify({
+        "message": f"Inicio de sesión exitoso como {user_type}.",
+        "user": response
     }), 200
 
+# =====================================
+# MOSTRAR TODOS LOS CLIENTES
+# =====================================
+from flask import jsonify
+from sqlalchemy.exc import SQLAlchemyError
+
+@app.route("/users", methods=["GET"])
+def get_all_users():
+    try:
+        # Consultar todos los usuarios
+        users = User.query.all()
+
+        # Si no hay usuarios en la base de datos
+        if not users:
+            return jsonify({"message": "No hay usuarios registrados"}), 404
+
+        # Convertir a formato JSON
+        user_list = []
+        for user in users:
+            user_list.append({
+                "id": user.id,
+                "Nombre": user.Nombre,
+                "Apellido": user.Apellido,
+                "Email": user.Email,
+                "Foto": user.Foto_perfil,
+                "Telefono": user.Telefono,
+                "Fecha Nacimiento": user.Fecha_nacimiento,
+                "Genero": user.Genero,
+                "Direccion": user.Direccion,
+                "Ciudad": user.Ciudad,
+                "Estado": user.Estado_provincia,
+                "CP": user.Codigo_postal,  
+                "Pais": user.Pais,
+                "Tipo de Direccion": user.Tipo_direccion,
+                "Fecha Creacion": user.Fecha_creacion,
+                "Activo": user.Activo
+            })
+
+        return jsonify({"users": user_list}), 200
+
+    except SQLAlchemyError as e:
+        # Error al consultar la base de datos
+        db.session.rollback()
+        return jsonify({
+            "error": "Error al consultar la base de datos",
+            "details": str(e)
+        }), 500
+
+    except Exception as e:
+        # Error general
+        return jsonify({
+            "error": "Error interno del servidor",
+            "details": str(e)
+        }), 500
+
+
+
+
+# =====================================
+# LOGOUT
+# =====================================
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return jsonify({"message": "Sesión cerrada correctamente"}), 200
+
+
+# =====================================
+# EJECUCIÓN
+# =====================================
 if __name__ == "__main__":
     app.run(debug=True)
-
-    # FIRMA 

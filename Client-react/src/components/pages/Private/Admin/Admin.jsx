@@ -9,6 +9,7 @@ import ProductManagement from "../../../Layout/ProductManagement/ProductManageme
 import ReportAnalyze from "../../../Common/Dashboard/RportAnalyze";
 import Notifications from "../../../Layout/notifications/notifications";
 import { Update_Password } from "./Update_Password/Update_Password";
+import LogoutLink from "../../../Auth/logout/LogoutLink";
 export default function Admin() {
   // Estado de pestaña activa
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -135,7 +136,7 @@ export default function Admin() {
               </div>
             </div>
             <button className="btn btn-light" onClick={() => alert("Salir")}>
-              <i className={`fas fa-sign-out-alt ${styles.menuIcon}`}></i> Salir
+              <LogoutLink/>
             </button>
           </div>
         </div>

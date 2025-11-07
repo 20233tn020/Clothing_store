@@ -24,18 +24,7 @@ export default function Home() {
     showAlert('¡Te has suscrito correctamente!', 'success')
   }
 
-  useEffect(() => {
-    fetch('http://localhost:5000/api/users')
-      .then((res) => res.json())
-      .then((data) => {
-        setUsers(data)
-        showAlert('Usuarios cargados correctamente', 'success')
-      })
-      .catch((error) => {
-        console.error('Error fetching users:', error)
-        showAlert('Error al cargar los datos', 'error')
-      })
-  }, [])
+
 
   useEffect(() => {
     const checkScroll = () => {
