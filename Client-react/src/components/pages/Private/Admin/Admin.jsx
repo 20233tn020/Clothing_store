@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect,useState } from "react";
 import styles from './Admin.module.css';
 import clsx from 'clsx';
 import SalesChart from "../../../Common/Dashboard/SalesChart";
@@ -10,9 +10,19 @@ import ReportAnalyze from "../../../Common/Dashboard/RportAnalyze";
 import Notifications from "../../../Layout/notifications/notifications";
 import { Update_Password } from "./Update_Password/Update_Password";
 import LogoutLink from "../../../Auth/logout/LogoutLink";
+import axios from "axios";
+import Swal from "sweetalert2";
+
 export default function Admin() {
   // Estado de pestaña activa
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [userCount, setUserCount] = useState(0);
+
+  useEffect(() => {
+    axios.get("http://127.0.0.1:5000/UserCount")
+      .then(res => setUserCount(res.data.total_usuarios))
+      .catch(err => console.error("Error al obtener usuarios:", err));
+  }, []);
 
   // Funciones de acción de ejemplo
   const viewOrder = (id) => alert(`Ver pedido ${id}`);
@@ -84,6 +94,144 @@ export default function Admin() {
                 tension: 0.4
             }]
         };
+        function showAddUserModal() {
+  Swal.fire({
+    background: "#f9f9f9",
+    showClass: { popup: "animate__animated animate__fadeInDown" },
+    hideClass: { popup: "animate__animated animate__fadeOutUp" },
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    title: "Registrar Nuevo Usuario",
+    html: `
+      <div style="overflow-x:auto; max-width:100%; white-space:nowrap;">
+        <table style="min-width:800px; border-collapse:collapse; font-family:Arial, sans-serif; font-size:14px; width:100%;">
+          <tbody>
+            <tr>
+              <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Nombre</td>
+              <td style="padding:8px; border:1px solid #ddd;">
+                <input id="nombre" type="text" class="swal2-input" placeholder="Ingresa tu nombre" style="width:100%;"/>
+              </td>
+              <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Apellido</td>
+              <td style="padding:8px; border:1px solid #ddd;">
+                <input id="apellido" type="text" class="swal2-input" placeholder="Ingresa tu apellido" style="width:100%;"/>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Email</td>
+              <td style="padding:8px; border:1px solid #ddd;">
+                <input id="email" type="email" class="swal2-input" placeholder="correo@ejemplo.com" style="width:100%;"/>
+              </td>
+              <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Contraseña</td>
+              <td style="padding:8px; border:1px solid #ddd;">
+                <input id="password" type="password" class="swal2-input" placeholder="••••••••" style="width:100%;"/>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Teléfono</td>
+              <td style="padding:8px; border:1px solid #ddd;">
+                <input id="telefono" type="text" class="swal2-input" placeholder="+52 55..." style="width:100%;"/>
+              </td>
+              <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Fecha de Nacimiento</td>
+              <td style="padding:8px; border:1px solid #ddd;">
+                <input id="fecha_nacimiento" type="date" class="swal2-input" style="width:100%;"/>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Género</td>
+              <td style="padding:8px; border:1px solid #ddd;">
+                <select id="genero" class="swal2-input" style="width:100%;">
+                  <option value="">Selecciona...</option>
+                  <option value="Masculino">Masculino</option>
+                  <option value="Femenino">Femenino</option>
+                </select>
+              </td>
+              <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Ciudad</td>
+              <td style="padding:8px; border:1px solid #ddd;">
+                <input id="ciudad" type="text" class="swal2-input" placeholder="Ciudad" style="width:100%;"/>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Dirección</td>
+              <td colspan="3" style="padding:8px; border:1px solid #ddd;">
+                <input id="direccion" type="text" class="swal2-input" placeholder="Calle, número, colonia..." style="width:100%;"/>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="fas fa-user-plus"></i> Registrar',
+    cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+    width: "90%",
+    preConfirm: async () => {
+      const nombre = document.getElementById("nombre").value.trim();
+      const apellido = document.getElementById("apellido").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const telefono = document.getElementById("telefono").value.trim();
+      const fecha_nacimiento = document.getElementById("fecha_nacimiento").value.trim();
+      const genero = document.getElementById("genero").value.trim();
+      const direccion = document.getElementById("direccion").value.trim();
+      const ciudad = document.getElementById("ciudad").value.trim();
+
+      if (!nombre || !apellido || !email || !password) {
+        Swal.showValidationMessage(" Completa todos los campos obligatorios (nombre, apellido, email, contraseña).");
+        return false;
+      }
+
+      try {
+        const response = await fetch("http://127.0.0.1:5000/Signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            Nombre: nombre,
+            Apellido: apellido,
+            Email: email,
+            Password: password,
+            Telefono: telefono,
+            Fecha_nacimiento: fecha_nacimiento,
+            Genero: genero,
+            Direccion: direccion,
+            Ciudad: ciudad
+          }),
+        });
+
+        let result = null;
+        try {
+          result = await response.json();
+        } catch {
+          throw new Error("El servidor no devolvió una respuesta válida.");
+        }
+
+        if (!response.ok) {
+          throw new Error(result.error || "Error desconocido en el registro.");
+        }
+
+        return result;
+      } catch (error) {
+        Swal.showValidationMessage(`❌ ${error.message}`);
+      }
+    },
+  }).then((result) => {
+    if (result.isConfirmed && result.value) {
+      Swal.fire({
+        background: "#f9f9f9",
+        showClass: { popup: "animate__animated animate__fadeInDown" },
+        title: "Usuario registrado correctamente",
+        html: `
+          <div style="text-align:center; padding:10px;">
+            <i class="fas fa-user-check" style="font-size:50px; color:#28a745; margin-bottom:10px;"></i>
+            <p style="font-size:16px;">${result.value.nombre} ${result.value.apellido} ha sido registrado exitosamente.</p>
+          </div>
+        `,
+        confirmButtonColor: "#3085d6",
+        width: "450px",
+      });
+    }
+  });
+}
+
   return (
     <div className={styles.container}>
       <title>Panel de Administración - Tienda</title>
@@ -164,7 +312,7 @@ export default function Admin() {
                       <i className='fas fa-users'></i>
                     </div>
                   </div>
-                  <div className={styles.card_value}>1,248</div>
+                  <div className={styles.card_value}>{userCount.toLocaleString()}</div>
                   <div className={styles.card_title}>+12% respecto al mes anterior</div>
                 </div>
                 <div className={styles.card}>
@@ -262,9 +410,10 @@ export default function Admin() {
               <div className={styles.page_title}>
                 <h2>Gestion de Usuario</h2>
                 <div>
-                  <button class="btn btn-primary" onclick="showAddUserModal()">
-                    <i class="fas fa-plus"></i> Agregar Usuario
-                  </button>
+<button className="btn btn-primary" onClick={showAddUserModal}>
+  <i className="fas fa-plus"></i> Agregar Usuario
+</button>
+
                 </div>
               </div>
               <div className={styles.table_container}>

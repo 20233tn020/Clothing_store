@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import './ForgotPassword.css';
+import Swal from 'sweetalert2';
 
 const ForgotPassword = ({ onBackToLogin, onShowResetPassword }) => {
   const [email, setEmail] = useState('');
@@ -8,7 +10,7 @@ const ForgotPassword = ({ onBackToLogin, onShowResetPassword }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!email) {
       setMessage({ text: 'Por favor, ingresa tu correo electrónico', type: 'error' });
       return;
@@ -23,33 +25,29 @@ const ForgotPassword = ({ onBackToLogin, onShowResetPassword }) => {
     setMessage({ text: '', type: '' });
 
     try {
-      // Simular envío de email
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setMessage({ 
-        text: '¡Enlace de recuperación enviado! Revisa tu correo electrónico', 
-        type: 'success' 
+      //  Llamada real al backend Flask
+      const response = await axios.post("http://127.0.0.1:5000/forgot_password", {
+        email: email
       });
-      
-      // Mostrar pantalla de verificación de código después de 3 segundos
-      setTimeout(() => {
-        onShowResetPassword(email);
-      }, 3000);
-      
+
+      if (response.data.status === "success") {
+        Swal.fire("¡Enlace enviado!", "Revisa tu correo para continuar con el proceso.", "success");
+        setTimeout(() => {
+          onShowResetPassword(email);
+        }, 3000);
+      } else {
+        Swal.fire("Error", response.data.message || "No se pudo enviar el correo.", "error");
+      }
+
     } catch (error) {
-      setMessage({ 
-        text: 'Error al enviar el enlace. Intenta nuevamente.', 
-        type: 'error' 
-      });
+      console.error(" Error al enviar el enlace:", error);
+      Swal.fire("Error", "Ocurrió un error al enviar el correo. Intenta nuevamente.", "error");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const isValidEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   return (
     <div className="forgot-password-container">
@@ -60,9 +58,7 @@ const ForgotPassword = ({ onBackToLogin, onShowResetPassword }) => {
         </div>
 
         {message.text && (
-          <div className={`message ${message.type}`}>
-            {message.text}
-          </div>
+          <div className={`message ${message.type}`}>{message.text}</div>
         )}
 
         <form className="forgot-password-form" onSubmit={handleSubmit}>
@@ -81,11 +77,7 @@ const ForgotPassword = ({ onBackToLogin, onShowResetPassword }) => {
             />
           </div>
 
-          <button 
-            type="submit" 
-            className="btn-submit"
-            disabled={isLoading}
-          >
+          <button type="submit" className="btn-submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <i className="fas fa-spinner fa-spin"></i> Enviando...
@@ -99,11 +91,7 @@ const ForgotPassword = ({ onBackToLogin, onShowResetPassword }) => {
         </form>
 
         <div className="forgot-password-footer">
-          <button 
-            type="button" 
-            className="btn-back"
-            onClick={onBackToLogin}
-          >
+          <button type="button" className="btn-back" onClick={onBackToLogin}>
             <i className="fas fa-arrow-left"></i> Volver al Inicio de Sesión
           </button>
         </div>
