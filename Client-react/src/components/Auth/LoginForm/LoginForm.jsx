@@ -51,7 +51,7 @@ function LoginForm() {
       }
 
       // MOSTRAR TODOS LOS CAMPOS DISPONIBLES PARA DEBUG
-      console.log('🔍 Campos disponibles en user:', Object.keys(user));
+      console.log(' Campos disponibles en user:', Object.keys(user));
       
       // Preparar datos del usuario con todos los campos que necesitas
       const userData = {
@@ -99,10 +99,10 @@ function LoginForm() {
         const adminRoles = ['admin', 'administrador', 'administrator', 'superadmin', 'super user'];
 
         if (userType === 'admin' || adminRoles.includes(userRole)) {
-          console.log('🔐 Redirigiendo a panel de ADMIN');
+          console.log(' Redirigiendo a panel de ADMIN');
           navigate('/Admin', { replace: true });
         } else {
-          console.log('🛍️ Redirigiendo a SHOP');
+          console.log(' Redirigiendo a SHOP');
           navigate('/Shop', { replace: true });
         }
       }, 1500);

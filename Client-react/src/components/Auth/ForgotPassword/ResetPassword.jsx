@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import './ForgotPassword.css';
 
 const ResetPassword = ({ email, onBackToLogin, onBackToForgot }) => {
@@ -14,8 +15,6 @@ const ResetPassword = ({ email, onBackToLogin, onBackToForgot }) => {
       const newCode = [...code];
       newCode[index] = value;
       setCode(newCode);
-
-      // Auto-focus al siguiente input
       if (value && index < 5) {
         document.getElementById(`code-${index + 1}`).focus();
       }
@@ -30,49 +29,49 @@ const ResetPassword = ({ email, onBackToLogin, onBackToForgot }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const verificationCode = code.join('');
-    
+
     if (verificationCode.length !== 6) {
       setMessage({ text: 'Por favor, ingresa el código de 6 dígitos', type: 'error' });
       return;
     }
-
     if (!newPassword || !confirmPassword) {
       setMessage({ text: 'Por favor, completa todos los campos', type: 'error' });
       return;
     }
-
     if (newPassword.length < 6) {
       setMessage({ text: 'La contraseña debe tener al menos 6 caracteres', type: 'error' });
       return;
     }
-
     if (newPassword !== confirmPassword) {
       setMessage({ text: 'Las contraseñas no coinciden', type: 'error' });
       return;
     }
 
     setIsLoading(true);
+    setMessage({ text: '', type: '' });
 
     try {
-      // Simular verificación de código y cambio de contraseña
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setMessage({ 
-        text: '¡Contraseña restablecida exitosamente!', 
-        type: 'success' 
+      // 🔹 Petición real al backend Flask
+      const res = await axios.post('http://localhost:5000/reset_password', {
+        email,
+        codigo: verificationCode,
+        new_password: newPassword,
       });
-      
-      // Redirigir al login después de 2 segundos
-      setTimeout(() => {
-        onBackToLogin();
-      }, 2000);
-      
+
+      if (res.status === 200) {
+        setMessage({ text: '¡Contraseña restablecida exitosamente!', type: 'success' });
+        setTimeout(() => onBackToLogin(), 2000);
+      } else {
+        setMessage({ text: 'Error al restablecer la contraseña.', type: 'error' });
+      }
+
     } catch (error) {
-      setMessage({ 
-        text: 'Código inválido o error al restablecer la contraseña', 
-        type: 'error' 
+      console.error('Error en reset:', error);
+      setMessage({
+        text: error.response?.data?.error || 'Código inválido o error al restablecer la contraseña',
+        type: 'error',
       });
     } finally {
       setIsLoading(false);
@@ -113,9 +112,7 @@ const ResetPassword = ({ email, onBackToLogin, onBackToForgot }) => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="newPassword" className="form-label">
-              Nueva Contraseña
-            </label>
+            <label htmlFor="newPassword" className="form-label">Nueva Contraseña</label>
             <div className="password-input-container">
               <input
                 type={showPassword ? "text" : "password"}
@@ -136,9 +133,7 @@ const ResetPassword = ({ email, onBackToLogin, onBackToForgot }) => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="confirmPassword" className="form-label">
-              Confirmar Contraseña
-            </label>
+            <label htmlFor="confirmPassword" className="form-label">Confirmar Contraseña</label>
             <input
               type={showPassword ? "text" : "password"}
               id="confirmPassword"
@@ -150,11 +145,7 @@ const ResetPassword = ({ email, onBackToLogin, onBackToForgot }) => {
             />
           </div>
 
-          <button 
-            type="submit" 
-            className="btn-submit"
-            disabled={isLoading}
-          >
+          <button type="submit" className="btn-submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <i className="fas fa-spinner fa-spin"></i> Restableciendo...
@@ -170,19 +161,11 @@ const ResetPassword = ({ email, onBackToLogin, onBackToForgot }) => {
         <div className="forgot-password-footer">
           <p>
             ¿No recibiste el código?{' '}
-            <button 
-              type="button" 
-              className="btn-link"
-              onClick={onBackToForgot}
-            >
+            <button type="button" className="btn-link" onClick={onBackToForgot}>
               Reenviar código
             </button>
           </p>
-          <button 
-            type="button" 
-            className="btn-back"
-            onClick={onBackToLogin}
-          >
+          <button type="button" className="btn-back" onClick={onBackToLogin}>
             <i className="fas fa-arrow-left"></i> Volver al Inicio de Sesión
           </button>
         </div>

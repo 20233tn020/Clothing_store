@@ -17,8 +17,12 @@ import ReportAnalyze from './components/Common/Dashboard/RportAnalyze.jsx'
 import Notifications from './components/Layout/notifications/notifications.jsx'
 import { Update_Password } from './components/pages/Private/Admin/Update_Password/Update_Password.jsx'
 import LogoutLink from './components/Auth/logout/LogoutLink.jsx'
+import { GoogleOAuthProvider } from '@react-oauth/google';
 export default function App() {
   return (
+      <GoogleOAuthProvider clientId="915284224791-053n49a9auhgm7h1q90k3kfso8g52ktb.apps.googleusercontent.com">
+    <App />
+  </GoogleOAuthProvider>,
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<LoginForm />} />

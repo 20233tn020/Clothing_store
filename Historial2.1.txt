@@ -1,0 +1,15 @@
+# =====================================
+# Historial 2.1
+# =====================================
+    -Se creo un API 'DeleteUser' de metodo =DELETE   para eliminar los usuarios mediante el Admin
+
+    -PRUEBAS-
+    1.1 Fallo en el entorno de varible 
+    1.3 Succeful : Fue exitoso la api
+#=========================================================================
+    -Se creo una Api 'UpdateUser' de petodo = PUT para poder actualizar los datos del usuarios mediante el Admin
+    -Se creo una Api 'UpdatePassowrdAdmin' metodo = PUT para poder cambiar la contraseña del Admin
+    SE CRE UN METODO DE SEGURIDAD PARA EL ADMINISTRADOR cuando no hay interaccion por cierto minutos se cierra la session 
+    -Se creo API para contar la catidad de usuario para ponerlo en el card del ADMINISTRADOR
+    - se finalizo un boton para poder registrar usuario en caso que los usuario no pueda registrar
+    
