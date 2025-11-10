@@ -6,13 +6,45 @@ import { Link } from 'react-router-dom';
 
 export const Header = () => {
   const [user, setUser] = useState(null);
+ // 🔹 Función para normalizar los datos del usuario
+  const normalizeUser = (raw) => {
+    if (!raw) return null;
+    const r = typeof raw === "string" ? JSON.parse(raw) : raw;
+    return {
+      id: r.id || r.ID || null,
+      nombre: r.nombre || r.Nombre || r.name || "",
+      apellido: r.apellido || r.Apellido || r.lastname || "",
+      genero: r.genero || r.Genero || "",
+      email: r.email || r.Email || "",
+      telefono: r.telefono || r.Telefono || "",
+      foto: r.foto || r.Foto || r.avatar || "",
+    };
+  };
 
+  // 🔹 Cargar el usuario al montar el componente
   useEffect(() => {
-    // Obtener usuario del localStorage
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) setUser(normalizeUser(storedUser));
+
+    // 🔸 Escucha los cambios en localStorage (otras pestañas)
+    const handleStorageChange = (event) => {
+      if (event.key === "user") {
+        setUser(normalizeUser(event.newValue));
+      }
+    };
+
+    // 🔸 Escucha el evento personalizado (misma pestaña)
+    const handleUserUpdated = (event) => {
+      setUser(normalizeUser(event.detail));
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("userUpdated", handleUserUpdated);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("userUpdated", handleUserUpdated);
+    };
   }, []);
 
   const handleLogout = () => {

@@ -109,51 +109,41 @@ export default function Admin() {
             <tr>
               <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Nombre</td>
               <td style="padding:8px; border:1px solid #ddd;">
-                <input id="nombre" type="text" class="swal2-input" placeholder="Ingresa tu nombre" style="width:100%;"/>
+                <input id="nombre" type="text" class="swal2-input" placeholder="Ingresa tu nombre" style="width:90%;"/>
               </td>
               <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Apellido</td>
               <td style="padding:8px; border:1px solid #ddd;">
-                <input id="apellido" type="text" class="swal2-input" placeholder="Ingresa tu apellido" style="width:100%;"/>
+                <input id="apellido" type="text" class="swal2-input" placeholder="Ingresa tu apellido" style="width:90%;"/>
               </td>
             </tr>
             <tr>
               <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Email</td>
               <td style="padding:8px; border:1px solid #ddd;">
-                <input id="email" type="email" class="swal2-input" placeholder="correo@ejemplo.com" style="width:100%;"/>
+                <input id="email" type="email" class="swal2-input" placeholder="correo@ejemplo.com" style="width:90%;"/>
               </td>
               <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Contraseña</td>
               <td style="padding:8px; border:1px solid #ddd;">
-                <input id="password" type="password" class="swal2-input" placeholder="••••••••" style="width:100%;"/>
+                <input id="password" type="password" class="swal2-input" placeholder="••••••••" style="width:90%;"/>
               </td>
             </tr>
             <tr>
               <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Teléfono</td>
               <td style="padding:8px; border:1px solid #ddd;">
-                <input id="telefono" type="text" class="swal2-input" placeholder="+52 55..." style="width:100%;"/>
+                <input id="telefono" type="text" class="swal2-input" placeholder="+52 55..." style="width:90%;"/>
               </td>
               <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Fecha de Nacimiento</td>
               <td style="padding:8px; border:1px solid #ddd;">
-                <input id="fecha_nacimiento" type="date" class="swal2-input" style="width:100%;"/>
+                <input id="fecha_nacimiento" type="date" class="swal2-input" style="width:90%;"/>
               </td>
             </tr>
             <tr>
               <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Género</td>
               <td style="padding:8px; border:1px solid #ddd;">
-                <select id="genero" class="swal2-input" style="width:100%;">
+                <select id="genero" class="swal2-input" style="width:90%;">
                   <option value="">Selecciona...</option>
                   <option value="Masculino">Masculino</option>
                   <option value="Femenino">Femenino</option>
                 </select>
-              </td>
-              <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Ciudad</td>
-              <td style="padding:8px; border:1px solid #ddd;">
-                <input id="ciudad" type="text" class="swal2-input" placeholder="Ciudad" style="width:100%;"/>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:8px; background:#fabc66; border:1px solid #ddd;">Dirección</td>
-              <td colspan="3" style="padding:8px; border:1px solid #ddd;">
-                <input id="direccion" type="text" class="swal2-input" placeholder="Calle, número, colonia..." style="width:100%;"/>
               </td>
             </tr>
           </tbody>
@@ -172,8 +162,6 @@ export default function Admin() {
       const telefono = document.getElementById("telefono").value.trim();
       const fecha_nacimiento = document.getElementById("fecha_nacimiento").value.trim();
       const genero = document.getElementById("genero").value.trim();
-      const direccion = document.getElementById("direccion").value.trim();
-      const ciudad = document.getElementById("ciudad").value.trim();
 
       if (!nombre || !apellido || !email || !password) {
         Swal.showValidationMessage(" Completa todos los campos obligatorios (nombre, apellido, email, contraseña).");
@@ -192,8 +180,6 @@ export default function Admin() {
             Telefono: telefono,
             Fecha_nacimiento: fecha_nacimiento,
             Genero: genero,
-            Direccion: direccion,
-            Ciudad: ciudad
           }),
         });
 
@@ -210,7 +196,7 @@ export default function Admin() {
 
         return result;
       } catch (error) {
-        Swal.showValidationMessage(`❌ ${error.message}`);
+        Swal.showValidationMessage(` ${error.message}`);
       }
     },
   }).then((result) => {

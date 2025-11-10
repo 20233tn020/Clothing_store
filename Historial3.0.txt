@@ -1,0 +1,24 @@
+# =======================
+# CREACION
+# ======================
+ Se CREO UNA API para extrer las direcciones de los usuarios "
+ Se CREO UNA  API PARA EDITAR Las direcciones del los usuarios
+ Se creo UNA API PARA ELIMINAR Las direcciones de los usuarios
+ SE CREO UN API PARA CAMBIAR  Las contraseñas de los usuarios
+ SE CREO UNA API PARA AGREGAR MAS direcciones de los usuarios
+ SE CREO LA interfaz PARA AGREGAR MAS direcciones DE LOS USUARIOS (EN PROCESO  => Se rediseñara la interfaz nuevamente despues)
+ 
+
+
+
+# ========================
+# CORRECCIONES  
+# ========================
+ Se corrigio el bug de la interfaz de gestion de usuarios por parte de los Administradores 
+ Se modifico la API de getUserAll para mostrar junto con las direcciones para la interfaz del Administradores
+ Se  rediseño la interfaz de 'Detalle del usuarios'  por parte del Administrador
+  Se CREO UNA API para extrer las direcciones de los usuarios " 
+ Se rediseño la interfaz de 'Editar Usuarios' `por parte del Administrador
+ Se rediseño la base de datos completamente con uno mas estrcturado y se hizo las relaciones 
+
+

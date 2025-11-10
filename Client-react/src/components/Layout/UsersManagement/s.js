@@ -4,25 +4,19 @@ import { Footer } from "../../Layout/footer/Footer";
 import { FloatingWhatsApp } from "../../FloatingWhatsApp/FloatingWhatsApp";
 import LogoutLink from "../../Auth/logout/LogoutLink";
 import "./Perfil.css";
+
 import "react-profile/themes/default";
 import { openEditor } from "react-profile";
+
 import axios from "axios";
 import Swal from "sweetalert2";
 
 export default function Perfil() {
-
   const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("personal");
-  // Direcciones del usuario desde la API
-  const [addresses, setAddresses] = useState([]);
-  const [formData, setFormData] = useState({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-  });
 
-
+// Direcciones del usuario desde la API
+const [addresses, setAddresses] = useState([]);
 
 const fetchAddresses = async () => {
   if (!user?.id) return;
@@ -103,7 +97,6 @@ useEffect(() => {
       ...prev,
       [id]: value,
     }));
-    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleLogout = () => {
@@ -498,7 +491,7 @@ if (formValues.isDefault) {
 };
 
 
-  //  Enviar actualización al backend Flask
+  // 🔹 Enviar actualización al backend Flask
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) return;
@@ -583,145 +576,6 @@ if (formValues.isDefault) {
       });
     }
   };
-
-
-    // Actualizar contraseña en la API
-const handleChangePassword = async () => {
-  const { currentPassword, newPassword, confirmPassword } = formData;
-  const user = JSON.parse(localStorage.getItem("user"));
-  const token = localStorage.getItem("token");
-
-if (!currentPassword || !newPassword || !confirmPassword) {
-  Swal.fire({
-    title: "Campos incompletos",
-    html: `
-      <div style="text-align: center; padding: 15px;">
-        <i class="fa-solid fa-circle-exclamation" 
-           style="font-size: 60px; color: #facc15; margin-bottom: 15px; animation: pop 0.4s ease;"></i>
-        <p style="font-size: 16px; color: #000000ff;">
-          Por favor completa todos los campos antes de continuar.
-        </p>
-      </div>
-    `,   color: "#262626ff",
-    confirmButtonColor: "#6366F1",
-    confirmButtonText: "Entendido",
-    width: "420px",
-    customClass: {
-      popup: "swal2-glass",
-      confirmButton: "swal2-button",
-    },
-    showClass: {
-      popup: "animate__animated animate__fadeInDown",
-    },
-    hideClass: {
-      popup: "animate__animated animate__fadeOutUp",
-    },
-  });
-  return;
-}
-
-if (newPassword !== confirmPassword) {
-  Swal.fire({
-    title: "Error",
-    html: `
-      <div style="text-align: center; padding: 15px;">
-        <i class="fa-solid fa-circle-xmark" 
-           style="font-size: 60px; color: #ef4444; margin-bottom: 15px; animation: shake 0.4s ease;"></i>
-        <p style="font-size: 16px; color: #010101ff;">
-          Las contraseñas no coinciden. Inténtalo de nuevo.
-        </p>
-      </div>
-    `,
-    color: "#262626ff",
-    confirmButtonText: "Reintentar",
-    width: "420px",
-    customClass: {
-      popup: "swal2-glass",
-      confirmButton: "swal2-button",
-    },
-    showClass: {
-      popup: "animate__animated animate__shakeX",
-    },
-  });
-  return;
-}
-setIsLoading(true);
-  try {
-    const response = await axios.put(
-      "http://127.0.0.1:5000/UpdatePasswordUser",
-      {
-        id: user.id,
-        password: currentPassword, //
-        newPassword: newPassword, 
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-setIsLoading(false);
-      Swal.fire({
-    title: "Contraseña actualizada",
-    html: `
-      <div style="text-align: center; padding: 15px;">
-        <i class="fa-solid fa-circle-check" 
-           style="font-size: 60px; color: #4ade80; margin-bottom: 15px; animation: pop 0.4s ease;"></i>
-        <p style="font-size: 16px; color: #000000ff;">
-          ${response.data.message || "Tu contraseña ha sido actualizada correctamente."}
-        </p>
-      </div>
-    `,
-    color: "#262626ff",
-    confirmButtonColor: "#6366F1",
-    confirmButtonText: "Aceptar",
-    width: "420px",
-    customClass: {
-      popup: "swal2-glass",
-      confirmButton: "swal2-button",
-    },
-    showClass: {
-      popup: "animate__animated animate__fadeInDown",
-    },
-    hideClass: {
-      popup: "animate__animated animate__fadeOutUp",
-    },
-  });
-
-  // Limpia los campos
-  setFormData({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-  } catch (error) {
-    Swal.fire({
-   title: "Error",
-    html: `
-      <div style="text-align: center; padding: 15px;">
-        <i class="fa-solid fa-circle-xmark" 
-           style="font-size: 60px; color: #ef4444; margin-bottom: 15px; animation: shake 0.4s ease;"></i>
-        <p style="font-size: 16px; color: #000000ff;">
-          ${error.response?.data?.error || "Ocurrió un error al actualizar la contraseña."}
-        </p>
-      </div>
-    `,
-    color: "#262626ff",
-    confirmButtonColor: "#6366F1",
-    confirmButtonText: "Intentar de nuevo",
-    width: "420px",
-    customClass: {
-      popup: "swal2-glass",
-      confirmButton: "swal2-button",
-    },
-    showClass: {
-      popup: "animate__animated animate__shakeX",
-    },
-    });
-  }
-};
-
 
   if (!user) return <p>Cargando perfil...</p>;
 
@@ -1082,111 +936,26 @@ setIsLoading(false);
           )}
 
           {/* SECCIÓN DE SEGURIDAD */}
-          {activeSection === "security" && (
-  <div className="profile-section animate__animated animate__fadeIn">
-    <h2 className="section-title text-center mb-4">
-      <i className="fa-solid fa-lock me-2"></i> Cambiar Contraseña
-    </h2>
-
-    <form
-      className="password-form p-4 rounded-4 shadow-lg"
-      onSubmit={(e) => {
-        e.preventDefault();
-        handleChangePassword();
-      }}
-      style={{
-      }}
-    >
-      {/* Contraseña actual */}
-      <div className="form-group mb-3">
-        <label
-          htmlFor="currentPassword"
-          className="form-label "
-        >
-          Contraseña Actual
-        </label>
-        <input
-          type="password"
-          name="currentPassword"
-          value={formData.currentPassword}
-          onChange={handleChange}
-          className="form-control "
-          placeholder="Ingresa tu contraseña actual"
-        />
-      </div>
-
-      {/* Nueva contraseña */}
-      <div className="form-group mb-3">
-        <label
-          htmlFor="newPassword"
-          className="form-label "
-        >
-          Nueva Contraseña
-        </label>
-        <input
-          type="password"
-          name="newPassword"
-          value={formData.newPassword}
-          onChange={handleChange}
-          className="form-control "
-          placeholder="Crea una nueva contraseña"
-        />
-      </div>
-
-      {/* Confirmar contraseña */}
-      <div className="form-group mb-4">
-        <label
-          htmlFor="confirmPassword"
-          className="form-label t"
-        >
-          Confirmar Contraseña
-        </label>
-        <input
-          type="password"
-          name="confirmPassword"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          className="form-control "
-          placeholder="Confirma tu nueva contraseña"
-        />
-      </div>
-
-      {/* Botón */}
-      <div className="text-center">
-
-        <button
-          type="submit"
-          className="btn btn-gradient px-5 py-2 rounded-3 fw-semibold"
-          style={{
-            background:
-              "linear-gradient(90deg, #f8961e 0%, #ff9f1c 50%, #f8f8f8F1 100%)",
-            border: "none",
-            color: "#fff",
-            boxShadow: "0 0 10px #f8961e",
-            transition: "transform 0.2s ease, box-shadow 0.2s ease",
-          }}
-          onMouseEnter={(e) =>
-            (e.target.style.transform = "scale(1.05)")
-          }
-          onMouseLeave={(e) =>
-            (e.target.style.transform = "scale(1)")
-          }
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <>
-              <i className="fa-solid fa-key me-2"></i> Actualizando Contraseña...
-            </>
-          ): (
-            <>
-                        <i className="fa-solid fa-key me-2"></i> Actualizar Contraseña
-            </>
+          {activeSection === 'security' && (
+            <div className="profile-section">
+              <h2 className="section-title">Cambiar Contraseña</h2>
+              <form>
+                <div className="form-group">
+                  <label htmlFor="currentPassword">Contraseña Actual</label>
+                  <input type="password" id="currentPassword" className="form-control" placeholder="Ingresa tu contraseña actual"/>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="newPassword">Nueva Contraseña</label>
+                  <input type="password" id="newPassword" className="form-control" placeholder="Ingresa nueva contraseña"/>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="confirmPassword">Confirmar Contraseña</label>
+                  <input type="password" id="confirmPassword" className="form-control" placeholder="Confirma tu nueva contraseña"/>
+                </div>
+                <button type="submit" className="btn btn-primary">Actualizar Contraseña</button>
+              </form>
+            </div>
           )}
-        </button>
-      </div>
-    </form>
-  </div>
-)}
 
           {/* SECCIÓN DE NOTIFICACIONES */}
           {activeSection === 'notifications' && (
