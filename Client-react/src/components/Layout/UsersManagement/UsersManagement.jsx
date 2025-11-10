@@ -5,15 +5,14 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import "animate.css";
 
-
 export default function UsersManagement() {
   const [users, setUsers] = useState([]);
 
   // Cargar los usuarios desde Flask
   useEffect(() => {
-    axios.get("http://127.0.0.1:5000/users") 
+    axios.get("http://127.0.0.1:5000/users")
       .then((response) => {
-        setUsers(response.data.users); 
+        setUsers(response.data.users);
       })
       .catch((error) => {
         console.error("Error al obtener usuarios:", error);
@@ -25,313 +24,234 @@ export default function UsersManagement() {
       });
   }, []);
 
-
-  // Función para formatear fecha
-function formatDate(dateString) {
-  if (!dateString) return 'N/A';
-  
-  try {
+  // Formatear fechas
+  function formatDate(dateString) {
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
-    
-    // Verificar si la fecha es válida
-    if (isNaN(date.getTime())) return 'N/A';
-    
-    // Formato dd/mm/aaaa
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    
-    return `${day}/${month}/${year}`;
-  } catch (error) {
-    console.error('Error formateando fecha:', error);
-    return 'N/A';
-  }
-}
-
-// Función para formatear fecha en formato YYYY-MM-DD (para input type="date")
-function formatDateForInput(dateString) {
-  if (!dateString) return '';
-  
-  try {
-    const date = new Date(dateString);
-    
-    if (isNaN(date.getTime())) return '';
-    
-    return date.toISOString().split('T')[0];
-  } catch (error) {
-    console.error('Error formateando fecha para input:', error);
-    return '';
-  }
-}
- async function showEditUserModal(id) {
-  const user = users.find(u => String(u.id) === String(id));
-  if (!user) {
-    console.warn("Usuario no encontrado:", id);
-    return;
+    if (isNaN(date.getTime())) return "N/A";
+    return date.toLocaleDateString("es-MX");
   }
 
-  await Swal.fire({
-    title: `Editar Usuario: ${user.Nombre}`,
-    html: `
-      <div style="overflow-x: auto; max-width: 100%; white-space: nowrap;">
-        <table style="min-width: 1200px; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 14px; width: 100%;">
-          <thead>
-            <tr>
-              <th style="padding: 10px; background: #ffc107; border: 1px solid #ddd;">Campo</th>
-              <th style="padding: 10px; background: #ffc107; border: 1px solid #ddd;">Valor Actual</th>
-              <th style="padding: 10px; background: #ffc107; border: 1px solid #ddd;">Nuevo Valor</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style="padding:10px; font-weight:bold;">Id</td>
-              <td style="padding:10px;">${user.id}</td>
-              <td style="padding:10px;">
-                <label id="edit-id" class="swal2-input" style="width:90%;">${user.id}</label>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px; font-weight:bold;">Nombre</td>
-              <td style="padding:10px;">${user.Nombre}</td>
-              <td style="padding:10px;">
-                <input type="text" value="${user.Nombre}" id="edit-nombre" class="swal2-input" style="width:90%;">
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px; font-weight:bold;">Apellido</td>
-              <td style="padding:10px;">${user.Apellido}</td>
-              <td style="padding:10px;">
-                <input type="text" value="${user.Apellido}" id="edit-apellido" class="swal2-input" style="width:90%;">
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px; font-weight:bold;">Email</td>
-              <td style="padding:10px;">${user.Email}</td>
-              <td style="padding:10px;">
-                <input type="email" value="${user.Email}" id="edit-email" class="swal2-input" style="width:90%;">
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px; font-weight:bold;">Teléfono</td>
-              <td style="padding:10px;">${user.Telefono}</td>
-              <td style="padding:10px;">
-                <input type="text" value="${user.Telefono}" id="edit-telefono" class="swal2-input" style="width:90%;">
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px; font-weight:bold;">Género</td>
-              <td style="padding:10px;">${user.Genero || 'N/A'}</td>
-              <td style="padding:10px;">
-                <select id="edit-genero" class="swal2-input" style="width:90%;">
-                  <option value="">Seleccionar</option>
-                  <option value="Masculino" ${user.Genero === 'Masculino' ? 'selected' : ''}>Masculino</option>
-                  <option value="Femenino" ${user.Genero === 'Femenino' ? 'selected' : ''}>Femenino</option>
-                  <option value="Otro" ${user.Genero === 'Otro' ? 'selected' : ''}>Otro</option>
-                </select>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: "Guardar Cambios",
-    cancelButtonText: "Cancelar",
-    confirmButtonColor: "#3085d6",
-    cancelButtonColor: "#d33",
-    width: "95%",
-    preConfirm: () => ({
-      id: document.getElementById("edit-id").textContent.trim(),
+  // Editar usuario
+  async function showEditUserModal(id) {
+    const user = users.find((u) => String(u.id) === String(id));
+    if (!user) return;
+await Swal.fire({
+  title: `Editar Usuario: ${user.Nombre}`,
+    width: '900px', 
+  html: `
+    <div style="overflow-x: auto;">
+      <table style="min-width:800px;border-collapse:collapse;font-size:14px;width:100%;">
+        <tr>
+          <th style="background:#ff9f1c; color:white;">Campo</th>
+          <th style="background:#ff9f1c; color:white;">Valor Actual</th>
+          <th style="background:#ff9f1c; color:white;">Nuevo Valor</th>
+        </tr>
+        <tr>
+          <td>Id</td>
+          <td>${user.id}</td>
+          <td><label id="edit-id" class="swal2-input" style="width:90%;">${user.id}</label></td>
+        </tr>
+        <tr>
+          <td>Nombre</td>
+          <td>${user.Nombre}</td>
+          <td><input id="edit-nombre" value="${user.Nombre}" class="swal2-input" style="width:90%;"></td>
+        </tr>
+        <tr>
+          <td>Apellido</td>
+          <td>${user.Apellido}</td>
+          <td><input id="edit-apellido" value="${user.Apellido}" class="swal2-input" style="width:90%;"></td>
+        </tr>
+        <tr>
+          <td>Email</td>
+          <td>${user.Email}</td>
+          <td><input id="edit-email" value="${user.Email}" class="swal2-input" style="width:90%;"></td>
+        </tr>
+        <tr>
+          <td>Email</td>
+          <td>${user.Password || '••••••'}</td>
+          <td><input id="edit-Password" value="${user.Password || '••••••'}" class="swal2-input" style="width:90%;"></td>
+        </tr>
+        <tr>
+          <td>Teléfono</td>
+          <td>${user.Telefono || "N/A"}</td>
+          <td><input id="edit-telefono" value="${user.Telefono || ""}" class="swal2-input" style="width:90%;"></td>
+        </tr>
+        <tr>
+          <td>Género</td>
+          <td>${user.Genero || "N/A"}</td>
+          <td>
+            <select id="edit-genero" class="swal2-input" style="width:90%;">
+              <option value="">Seleccionar</option>
+              <option value="Masculino" ${user.Genero === "Masculino" ? "selected" : ""}>Masculino</option>
+              <option value="Femenino" ${user.Genero === "Femenino" ? "selected" : ""}>Femenino</option>
+              <option value="Otro" ${user.Genero === "Otro" ? "selected" : ""}>Otro</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td>Estado</td>
+          <td>${user.Activo || "N/A"}</td>
+          <td>
+            <select id="edit-estado" class="swal2-input" style="width:90%;">
+              <option value="">Seleccionar</option>
+              <option value="Activo" ${user.Activo === "Activo" ? "selected" : ""}>Activo</option>
+              <option value="Inactivo" ${user.Activo === "Inactivo" ? "selected" : ""}>Inactivo</option>
+              <option value="Desactivado" ${user.Activo === "Bloqueado" ? "selected" : ""}>Bloqueado</option>
+            </select>
+          </td>
+        </tr>
+      </table>
+    </div>`,
+  showCancelButton: true,
+  confirmButtonText: "Guardar Cambios",
+  cancelButtonText: "Cancelar",
+  confirmButtonColor: "#3085d6",
+  cancelButtonColor: "#d33",
+  preConfirm: () => {
+    return {
+       id: document.getElementById("edit-id").textContent.trim(),
       Nombre: document.getElementById("edit-nombre").value.trim(),
       Apellido: document.getElementById("edit-apellido").value.trim(),
       Email: document.getElementById("edit-email").value.trim(),
+      Password: document.getElementById("edit-Password").value.trim(),
       Telefono: document.getElementById("edit-telefono").value.trim(),
-      Genero: document.getElementById("edit-genero").value
-    })
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      const updatedData = result.value;
+      Genero: document.getElementById("edit-genero").value,
+      Activo: document.getElementById("edit-estado").value
+    };
+  },
+}).then(async (result) => {
+  if (result.isConfirmed) {
+    try {
+      const response = await axios.put("http://127.0.0.1:5000/UpdateUser", result.value);
 
-      try {
-        const response = await axios.put("http://127.0.0.1:5000/UpdateUser", updatedData);
-
-        // Actualizar el estado local
-        setUsers(prevUsers =>
-          prevUsers.map(u => (u.id === id ? { ...u, ...updatedData } : u))
-        );
+      // Actualiza el estado local
+      setUsers((prev) =>
+        prev.map((u) => (u.id === user.id ? { ...u, ...result.value } : u))
+      );
 
         Swal.fire({
-          icon: "success",
-          title: "¡Usuario actualizado!",
-          text: response.data.message || "Los datos han sido actualizados correctamente.",
-          confirmButtonColor: "#3085d6"
-        });
-      } catch (error) {
-        console.error("Error al actualizar usuario:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Error al actualizar",
-          text: error.response?.data?.error || error.message,
-          confirmButtonColor: "#d33"
-        });
-      }
-    }
-  });
-}
-
-
-const confirmDeleteUser = async (id) => {
-  const user = users.find(u => u.id === id);
-  if (!user) return;
-
-  const result = await Swal.fire({
-    title: `¿Eliminar Usuario?`,
+    title: '¡Actualizado!',
     html: `
-      <div style="text-align: center; padding: 20px;">
-        <i class="fas fa-exclamation-triangle" style="font-size: 60px; color: #e74c3c; margin-bottom: 20px;"></i>
-        <p style="font-size: 18px; margin-bottom: 10px;">¿Estás seguro de que deseas eliminar al usuario?</p>
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin: 15px 0;">
-          <p style="margin: 5px 0; font-weight: bold;">${user.Nombre} ${user.Apellido}</p>
-          <p style="margin: 5px 0; color: #666;">ID: ${user.id}</p>
-          <p style="margin: 5px 0; color: #666;">Email: ${user.Email}</p>
-        </div>
-        <p style="color: #e74c3c; font-weight: bold;">
-          <i class="fas fa-exclamation-circle"></i> Esta acción no se puede deshacer
+      <div style="text-align: center; padding: 10px;">
+        <i class="fas fa-check-circle" style="font-size: 50px; color: #28a745; margin-bottom: 15px;"></i>
+        <p style="font-size: 16px;">El usuario <strong>${user.Nombre} ${user.Apellido}</strong> ha sido actualizado correctamente.</p>
+        <p style="font-size: 14px; color: #555; margin-top: 5px;">
+          ${response.data.message || "Los cambios se guardaron con éxito."}
         </p>
       </div>
     `,
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    cancelButtonColor: '#3085d6',
-    confirmButtonText: 'Sí, eliminar',
-    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#3085d6',
     background: '#f9f9f9',
-    showClass: { popup: 'animate__animated animate__fadeInDown' },
-    hideClass: { popup: 'animate__animated animate__fadeOutUp' },
-    width: '500px'
+    width: '450px'
   });
+    } catch (error) {
+       Swal.fire({
+    title: 'Error',
+    html: `
+      <div style="text-align: center; padding: 10px;">
+        <i class="fas fa-times-circle" style="font-size: 50px; color: #e74c3c; margin-bottom: 15px;"></i>
+        <p style="font-size: 16px;">No se pudo actualizar el usuario.</p>
+        <p style="font-size: 14px; color: #666; margin-top: 10px;">
+          Error: ${error.response?.data?.error || error.message}
+        </p>
+      </div>
+    `,
+    confirmButtonColor: '#3085d6',
+    background: '#f9f9f9',
+    width: '450px'
+  });
+    }
+  }
+});
+  }
+  // Eliminar usuario
+  const confirmDeleteUser = async (id) => {
+    const user = users.find((u) => u.id === id);
+    if (!user) return;
 
-  if (result.isConfirmed) {
-    try {
-      // DELETE enviando todos los campos requeridos por Flask
-      const response = await axios.delete("http://127.0.0.1:5000/DeleteUser", {
+    const result = await Swal.fire({
+      title: "¿Eliminar Usuario?",
+      html: `<p>¿Seguro que deseas eliminar a <strong>${user.Nombre} ${user.Apellido}</strong>?</p>`,
+      showCancelButton: true,
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#d33",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axios.delete("http://127.0.0.1:5000/DeleteUser", {
         data: {
           id: user.id,
           Nombre: user.Nombre,
           Email: user.Email
-        }
-      });
-
-      // Actualizar el estado en React
-      setUsers(prev => prev.filter(u => u.id !== id));
-
-      // Confirmación de éxito
-      Swal.fire({
-        title: '¡Eliminado!',
-        html: `
-          <div style="text-align: center; padding: 10px;">
-            <i class="fas fa-check-circle" style="font-size: 50px; color: #28a745; margin-bottom: 15px;"></i>
-            <p style="font-size: 16px;">El usuario <strong>${user.Nombre} ${user.Apellido}</strong> ha sido eliminado correctamente.</p>
-          </div>
-        `,
-        confirmButtonColor: '#3085d6',
-        background: '#f9f9f9',
-        width: '450px'
-      });
-
-    } catch (error) {
-      console.error('Error al eliminar usuario:', error);
-
-      Swal.fire({
-        title: 'Error',
-        html: `
-          <div style="text-align: center; padding: 10px;">
-            <i class="fas fa-times-circle" style="font-size: 50px; color: #e74c3c; margin-bottom: 15px;"></i>
-            <p style="font-size: 16px;">No se pudo eliminar el usuario.</p>
-            <p style="font-size: 14px; color: #666; margin-top: 10px;">Error: ${error.response?.data?.error || error.message}</p>
-          </div>
-        `,
-        confirmButtonColor: '#3085d6',
-        background: '#f9f9f9',
-        width: '450px'
-      });
+        },
+        });
+        setUsers((prev) => prev.filter((u) => u.id !== id));
+        Swal.fire("Eliminado", "El usuario ha sido eliminado correctamente", "success");
+      } catch (error) {
+        Swal.fire("Error", error.response?.data?.error || error.message, "error");
+      }
     }
+  };
+
+  // Ver usuario con direcciones
+  function viewUser(id) {
+    const user = users.find((u) => String(u.id) === String(id));
+    if (!user) return;
+
+    const direccionesHTML = user.Direcciones?.length
+      ? user.Direcciones.map(
+          (d, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${d.direccion}</td>
+          <td>${d.ciudad}</td>
+          <td>${d.estado_provincia}</td>
+          <td>${d.codigo_postal}</td>
+          <td>${d.pais}</td>
+          <td>${d.tipo_direccion}</td>
+        </tr>`
+        ).join("")
+      : `<tr><td colspan="7">Sin direcciones registradas</td></tr>`;
+
+    Swal.fire({
+      title: `Detalles de ${user.Nombre}`,
+      width: "95%",
+      background: "#f9f9f9",
+      confirmButtonColor: "#3085d6",
+      html: `
+        <div style="overflow-x:auto;">
+          <table style="min-width:1000px;border-collapse:collapse;font-size:14px;">
+            <tr><th>ID</th><td>${user.id}</td></tr>
+            <tr><th>Nombre</th><td>${user.Nombre} ${user.Apellido}</td></tr>
+            <tr><th>Email</th><td>${user.Email}</td></tr>
+            <tr><th>Teléfono</th><td>${user.Telefono}</td></tr>
+            <tr><th>Género</th><td>${user.Genero || "N/A"}</td></tr>
+            <tr><th>Activo</th><td>${user.Activo}</td></tr>
+            <tr><th>Fecha Creación</th><td>${formatDate(user.Fecha_creacion)}</td></tr>
+          </table>
+          <br>
+          <h4> Direcciones registradas</h4>
+          <table border="1" style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#fabc66;">
+                <th>#</th><th>Dirección</th><th>Ciudad</th><th>Estado</th>
+                <th>C.P.</th><th>País</th><th>Tipo</th>
+              </tr>
+            </thead>
+            <tbody>${direccionesHTML}</tbody>
+          </table>
+        </div>
+      `,
+    });
   }
-};
-
-
-function viewUser(id) {
-  const user = users.find(u => String(u.id) === String(id));
-  if (!user) {
-    console.warn("Usuario no encontrado:", id);
-    return;
-  }
-
-  Swal.fire({
-    background: "#f9f9f9",
-    showClass: { popup: "animate__animated animate__fadeInDown" },
-    hideClass: { popup: "animate__animated animate__fadeOutUp" },
-    confirmButtonColor: "#3085d6",
-    title: `Detalles de ${user.Nombre}`,
-    html: `
-      <div style="overflow-x: auto; max-width: 100%; white-space: nowrap;">
-        <table style="min-width: 1200px; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 14px; width: 100%;">
-          <thead>
-            <tr>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap; position: sticky; left: 0;">ID</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">Nombre</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">Apellido</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">Email</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">Password</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">Teléfono</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">Fecha Nac.</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">Género</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">Dirección</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">Ciudad</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">Estado</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">C.P.</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">País</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">Fecha Creación</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">Fecha Actualización</th>
-              <th style="padding: 10px; background: #fabc66; border: 1px solid #ddd; white-space: nowrap;">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style="padding: 10px; border: 1px solid #ddd; background: white; position: sticky; left: 0;">${user.id}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Nombre}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Apellido}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Email}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Password || '••••••'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Telefono}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Fecha_Nacimiento || 'N/A'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Genero || 'N/A'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Direccion || 'N/A'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Ciudad || 'N/A'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Estado || 'N/A'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.CP || 'N/A'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Pais || 'N/A'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Fecha_creacion || 'N/A'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Fecha_actualizacion || 'N/A'}</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${user.Activo}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    `,
-    confirmButtonText: "Cerrar",
-    width: "95%",
-    customClass: {
-      popup: styles.swalPopup
-    }
-  });
-}
 
   return (
     <div className={styles.container}>
       <h2>Gestión de Usuarios</h2>
-
-     {users.length === 0 ? (
+      {users.length === 0 ? (
         <div className={styles.noUsers}>
           <i className="fas fa-user-slash"></i>
           <p>No hay usuarios registrados</p>
@@ -340,14 +260,8 @@ function viewUser(id) {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Apellido</th>
-              <th>Email</th>
-              <th>Password</th>
-              <th>Teléfono</th>
-              <th>Estado</th>
-              <th>Acciones</th>
+              <th>ID</th><th>Nombre</th><th>Apellido</th>
+              <th>Email</th><th>Password</th><th>Teléfono</th><th>Estado</th><th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -357,43 +271,30 @@ function viewUser(id) {
                 <td>{user.Nombre}</td>
                 <td>{user.Apellido}</td>
                 <td>{user.Email}</td>
-                <td>{user.Password|| '••••••'}</td>
+                <td>{user.Password || '••••••'}</td>
                 <td>{user.Telefono}</td>
                 <td>
-                    <span
-                      className={clsx(
-                        styles.badge,
-                        user.Activo == 1 || user.Activo === true
-                          ? styles.badgeSuccess
-                          : user.Activo == 0 || user.Activo === false
-                          ? styles.badgeWarning
-                          : styles.badgeGray
-                      )}
-                    >
-                    {user.Activo == 1 || user.Activo === true
-                      ? "Activo"
-                      : user.Activo == 0 || user.Activo === false
-                      ? "Inactivo"
-                      : "Desconocido"}
+                  <span
+                    className={clsx(
+                      styles.badge,
+                      user.Activo === "Activo"
+                        ? styles.badgeSuccess
+                        : user.Activo === "Inactivo"
+                        ? styles.badgeWarning
+                        : styles.badgeGray
+                    )}
+                  >
+                    {user.Activo}
                   </span>
                 </td>
                 <td className={styles.actions}>
-                  <button
-                    className="btn btn-sm btn-info"
-                    onClick={() => viewUser(user.id)}
-                  >
+                  <button className="btn btn-sm btn-info" onClick={() => viewUser(user.id)}>
                     <i className="fas fa-eye"></i>
                   </button>
-                  <button
-                    className="btn btn-sm btn-warning"
-                    onClick={() => showEditUserModal(user.id)}
-                  >
+                  <button className="btn btn-sm btn-warning" onClick={() => showEditUserModal(user.id)}>
                     <i className="fas fa-edit"></i>
                   </button>
-                  <button
-                    className="btn btn-sm btn-danger"
-                    onClick={() => confirmDeleteUser(user.id)}
-                  >
+                  <button className="btn btn-sm btn-danger" onClick={() => confirmDeleteUser(user.id)}>
                     <i className="fas fa-trash"></i>
                   </button>
                 </td>
