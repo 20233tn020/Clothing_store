@@ -1,4 +1,4 @@
-/* index.css */
+/*GLOBALES */
 * {
   margin: 0;
   padding: 0;
@@ -26,7 +26,6 @@ body {
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   --transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-
 
 @keyframes fadeInUp {
   from {

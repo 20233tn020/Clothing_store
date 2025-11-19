@@ -8,9 +8,10 @@ import "react-profile/themes/default";
 import { openEditor } from "react-profile";
 import axios from "axios";
 import Swal from "sweetalert2";
+import { useLocation } from "react-router-dom"; // Correcto
 
 export default function Perfil() {
-
+const location = useLocation();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("personal");
@@ -53,7 +54,11 @@ useEffect(() => {
   if (user?.id) fetchAddresses();
 }, [user]);
 
-
+useEffect(() => {
+  if (location.state?.activeSection) {
+    setActiveSection(location.state.activeSection);
+  }
+}, [location]);
 
   // 🔹 Cargar datos del usuario desde localStorage y normalizar campos
   useEffect(() => {
@@ -194,31 +199,58 @@ const addNewAddress = async () => {
     return;
   }
 
-  const { value: formValues } = await Swal.fire({
+const { value: formValues } = await Swal.fire({
     title: "<h3 style='color:#FFF; font-weight:600;'>Agregar Nueva Dirección</h3>",
     html: `
       <style>
+        .swal2-popup {
+            background: rgba(0, 0, 0, 0.1) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 16px !important;
+        }
         .swal2-input, .swal2-select {
-          background: #2B2B3D !important;
-          color: #F1F1F1 !important;
-          border: 1px solid #3E3E4E !important;
-          border-radius: 8px !important;
-          font-size: 14px !important;
-          padding: 10px 12px !important;
+           background: rgba(255, 255, 255, 0.08) !important;
+          backdrop-filter: blur(30px) saturate(200%) brightness(1.2) !important;
+          -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(1.2) !important;
+          color: #FFFFFF !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-radius: 16px !important;
+          font-size: 16px !important;
+          padding: 16px 18px !important;
           width: 100% !important;
-          margin-bottom: 10px !important;
+          margin-bottom: 16px !important;
+          transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+          box-shadow: 
+              0 8px 24px rgba(0, 0, 0, 0.15),
+              inset 0 1px 0 rgba(255, 255, 255, 0.08),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.05) !important;
+          font-weight: 500;
+          margin-left: 0% !important;
+        }
+            .swal2-input::placeholder, .swal2-select::placeholder {
+          color: rgba(255, 255, 255, 0.5) !important;
+          font-weight: 400;
         }
         .swal2-input:focus, .swal2-select:focus {
-          outline: none !important;
-          border-color: #6366F1 !important;
-          box-shadow: 0 0 6px #6366F1 !important;
+           outline: none !important;
+          border-color: rgba(99, 102, 241, 0.6) !important;
+          background: rgba(255, 255, 255, 0.12) !important;
+          box-shadow: 
+              0 0 0 4px rgba(99, 102, 241, 0.15),
+              0 12px 32px rgba(0, 0, 0, 0.25),
+              inset 0 2px 0 rgba(255, 255, 255, 0.1) !important;
+          transform: translateY(-2px) scale(1.01) !important;
+          backdrop-filter: blur(40px) saturate(250%) brightness(1.25) !important;
         }
         .swal2-label {
           display: block;
           margin-bottom: 4px;
           font-weight: 600;
-          color: #D1D5DB;
+          color: #FFFFFF;
           font-size: 13px;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
         }
         .swal2-checkbox-row {
           display: flex;
@@ -227,7 +259,57 @@ const addNewAddress = async () => {
           margin-top: 8px;
           color: #E5E7EB;
         }
+        .swal2-header, .swal2-content {
+          position: relative;
+          z-index: 1;
+        }
+          swal2-input:hover, .swal2-select:hover {
+          border-color: rgba(255, 255, 255, 0.18) !important;
+          background: rgba(255, 255, 255, 0.1) !important;
+          transform: translateY(-1px) !important;
+        }
       </style>
+      <style>
+.swal2-validation-message {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1)) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    border-radius: 12px !important;
+    color: #FECACA !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    padding: 16px !important;
+    margin: 20px 0 0 0 !important;
+    text-align: center !important;
+    box-shadow: 
+        0 4px 16px rgba(239, 68, 68, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+    animation: shake 0.5s ease-in-out !important;
+}
+
+.swal2-validation-message::before {
+    content: '⚠️ ';
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Opcional: Estilo para inputs con error */
+.swal2-input.error, .swal2-select.error {
+    border-color: rgba(239, 68, 68, 0.6) !important;
+    background: rgba(239, 68, 68, 0.08) !important;
+    box-shadow: 
+        0 0 0 3px rgba(239, 68, 68, 0.15),
+        0 8px 24px rgba(239, 68, 68, 0.1) !important;
+}
+</style>
 
       <div style="text-align:left;">
         <label class="swal2-label"><i class="fas fa-road"></i> Calle y número:</label>
@@ -258,15 +340,18 @@ const addNewAddress = async () => {
         </div>
       </div>
     `,
-    background: "#1E1E2F",
-    color: "#FFF",
+    background: "transparent",
+    color: "#FFFFFF",
     showCancelButton: true,
     confirmButtonText: "<i class='fas fa-save'></i> Guardar",
     cancelButtonText: "<i class='fas fa-times'></i> Cancelar",
     confirmButtonColor: "#6366F1",
-    cancelButtonColor: "#6B7280",
+    cancelButtonColor: "rgba(107, 114, 128, 0.7)",
     width: "500px",
     padding: "25px",
+    customClass: {
+        popup: 'glass-swal-popup'
+    },
     preConfirm: () => {
       const direccion = document.getElementById("swal-direccion").value.trim();
       const ciudad = document.getElementById("swal-ciudad").value.trim();
@@ -277,6 +362,7 @@ const addNewAddress = async () => {
       const principal = document.getElementById("swal-principal").checked;
 
       if (!direccion || !ciudad) {
+        
         Swal.showValidationMessage("La dirección y la ciudad son obligatorias.");
         return false;
       }
@@ -368,27 +454,54 @@ const editAddress = async (addressId) => {
     title: `<h3 style="color:#FFF; font-weight:600;">Editar Dirección</h3>`,
     html: `
       <style>
+        .swal2-popup {
+            background: rgba(0, 0, 0, 0.1) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 16px !important;
+        }
         .swal2-input, .swal2-select {
-          background: #2B2B3D !important;
-          color: #F1F1F1 !important;
-          border: 1px solid #3E3E4E !important;
-          border-radius: 8px !important;
-          font-size: 14px !important;
-          padding: 10px 12px !important;
+           background: rgba(255, 255, 255, 0.08) !important;
+          backdrop-filter: blur(30px) saturate(200%) brightness(1.2) !important;
+          -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(1.2) !important;
+          color: #FFFFFF !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-radius: 16px !important;
+          font-size: 16px !important;
+          padding: 16px 18px !important;
           width: 100% !important;
-          margin-bottom: 10px !important;
+          margin-bottom: 16px !important;
+          transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+          box-shadow: 
+              0 8px 24px rgba(0, 0, 0, 0.15),
+              inset 0 1px 0 rgba(255, 255, 255, 0.08),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.05) !important;
+          font-weight: 500;
+          margin-left: 0% !important;
+        }
+            .swal2-input::placeholder, .swal2-select::placeholder {
+          color: rgba(255, 255, 255, 0.5) !important;
+          font-weight: 400;
         }
         .swal2-input:focus, .swal2-select:focus {
-          outline: none !important;
-          border-color: #6366F1 !important;
-          box-shadow: 0 0 6px #6366F1 !important;
+           outline: none !important;
+          border-color: rgba(99, 102, 241, 0.6) !important;
+          background: rgba(255, 255, 255, 0.12) !important;
+          box-shadow: 
+              0 0 0 4px rgba(99, 102, 241, 0.15),
+              0 12px 32px rgba(0, 0, 0, 0.25),
+              inset 0 2px 0 rgba(255, 255, 255, 0.1) !important;
+          transform: translateY(-2px) scale(1.01) !important;
+          backdrop-filter: blur(40px) saturate(250%) brightness(1.25) !important;
         }
         .swal2-label {
           display: block;
           margin-bottom: 4px;
           font-weight: 600;
-          color: #D1D5DB;
+          color: #FFFFFF;
           font-size: 13px;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
         }
         .swal2-checkbox-row {
           display: flex;
@@ -397,17 +510,22 @@ const editAddress = async (addressId) => {
           margin-top: 8px;
           color: #E5E7EB;
         }
+        .swal2-header, .swal2-content {
+          position: relative;
+          z-index: 1;
+        }
+          swal2-input:hover, .swal2-select:hover {
+          border-color: rgba(255, 255, 255, 0.18) !important;
+          background: rgba(255, 255, 255, 0.1) !important;
+          transform: translateY(-1px) !important;
+        }
       </style>
 
       <div style="text-align:left;">
-        <label class="swal2-label"><i class="fas fa-map-marker-alt"></i> Nombre de la dirección:</label>
-        <input id="swal-name" class="swal2-input" value="${address.name || ""}" placeholder="Ej: Casa Principal">
 
         <label class="swal2-label"><i class="fas fa-road"></i> Calle y número:</label>
         <input id="swal-street" class="swal2-input" value="${address.street || ""}" placeholder="Ej: Av. Reforma 123">
 
-        <label class="swal2-label"><i class="fas fa-home"></i> Colonia:</label>
-        <input id="swal-colonia" class="swal2-input" value="${address.colonia || ""}" placeholder="Ej: Centro">
 
         <label class="swal2-label"><i class="fas fa-city"></i> Ciudad:</label>
         <input id="swal-city" class="swal2-input" value="${address.city || ""}" placeholder="Ej: Monterrey">
@@ -521,7 +639,7 @@ if (formValues.isDefault) {
       Swal.close();
 
       if (res.data.status === "success") {
-          await fetchAddresses(); // 🔁 recarga las direcciones del usuario
+          await fetchAddresses(); //  recarga las direcciones del usuario
         Swal.fire({
           title: "Datos actualizados",
           html: `
@@ -833,18 +951,6 @@ setIsLoading(false);
               </a>
             </li>
             <li>
-              <a
-                href="#"
-                className={activeSection === "notifications" ? "active" : ""}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveSection("notifications");
-                }}
-              >
-                <i className="fas fa-bell"></i> Notificaciones
-              </a>
-            </li>
-            <li>
               <LogoutLink onClick={handleLogout} />
             </li>
           </ul>
@@ -995,7 +1101,7 @@ setIsLoading(false);
 
           {/* SECCIÓN DE PEDIDOS RECIENTES */}
           {activeSection === 'orders' && (
-            <div className="profile-section">
+            <div  id="orders-section" className="profile-section">
               <h2 className="section-title">Pedidos Recientes</h2>
               
               <div className="order-card">
