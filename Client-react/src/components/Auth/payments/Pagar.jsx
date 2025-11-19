@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import './Pagar.css';
 import { Header, Finalizar_Compra } from '../../Layout/header/Header';
 import { Footer } from '../../Layout/footer/Footer';
-
+import axios from "axios";
+import Swal from "sweetalert2";
 export default function Pagar() {
   const navigate = useNavigate();
   const [cardData, setCardData] = useState({
@@ -104,22 +105,106 @@ export default function Pagar() {
     // Validaciones
     const cardNumber = cardData.number.replace(/\s/g, '');
     if (cardNumber.length < 16) {
-      alert('Por favor, ingresa un número de tarjeta válido');
+        Swal.fire({
+          title: "Error",
+          html: `
+            <div style="text-align: center; padding: 15px;">
+              <i class="fa-solid fa-circle-xmark" 
+                 style="font-size: 60px; color: #ef4444; margin-bottom: 15px; animation: shake 0.4s ease;"></i>
+              <p style="font-size: 16px; color: #010101ff;">
+                Por favor, ingresa un número de tarjeta válido
+              </p>
+            </div>
+          `,
+          color: "#262626ff",
+          confirmButtonText: "Reintentar",
+          width: "420px",
+          customClass: {
+            popup: "swal2-glass",
+            confirmButton: "swal2-button",
+          },
+          showClass: {
+            popup: "animate__animated animate__shakeX",
+          },
+        });
       return;
     }
     
     if (cardData.holder.length < 3) {
-      alert('Por favor, ingresa el nombre del titular de la tarjeta');
+              Swal.fire({
+          title: "Error",
+          html: `
+            <div style="text-align: center; padding: 15px;">
+              <i class="fa-solid fa-circle-xmark" 
+                 style="font-size: 60px; color: #ef4444; margin-bottom: 15px; animation: shake 0.4s ease;"></i>
+              <p style="font-size: 16px; color: #010101ff;">
+               Por favor, ingresa el nombre del titular de la tarjeta
+              </p>
+            </div>
+          `,
+          color: "#262626ff",
+          confirmButtonText: "Reintentar",
+          width: "420px",
+          customClass: {
+            popup: "swal2-glass",
+            confirmButton: "swal2-button",
+          },
+          showClass: {
+            popup: "animate__animated animate__shakeX",
+          },
+        });
       return;
     }
     
     if (cardData.expiry.length !== 5) {
-      alert('Por favor, ingresa una fecha de vencimiento válida (MM/AA)');
+                    Swal.fire({
+          title: "Error",
+          html: `
+            <div style="text-align: center; padding: 15px;">
+              <i class="fa-solid fa-circle-xmark" 
+                 style="font-size: 60px; color: #ef4444; margin-bottom: 15px; animation: shake 0.4s ease;"></i>
+              <p style="font-size: 16px; color: #010101ff;">
+              Por favor, ingresa una fecha de vencimiento válida (MM/AA)
+              </p>
+            </div>
+          `,
+          color: "#262626ff",
+          confirmButtonText: "Reintentar",
+          width: "420px",
+          customClass: {
+            popup: "swal2-glass",
+            confirmButton: "swal2-button",
+          },
+          showClass: {
+            popup: "animate__animated animate__shakeX",
+          },
+        });
       return;
     }
     
     if (cardData.cvv.length < 3) {
-      alert('Por favor, ingresa un CVV válido');
+                          Swal.fire({
+          title: "Error",
+          html: `
+            <div style="text-align: center; padding: 15px;">
+              <i class="fa-solid fa-circle-xmark" 
+                 style="font-size: 60px; color: #ef4444; margin-bottom: 15px; animation: shake 0.4s ease;"></i>
+              <p style="font-size: 16px; color: #010101ff;">
+              Por favor, ingresa un CVV válido
+              </p>
+            </div>
+          `,
+          color: "#262626ff",
+          confirmButtonText: "Reintentar",
+          width: "420px",
+          customClass: {
+            popup: "swal2-glass",
+            confirmButton: "swal2-button",
+          },
+          showClass: {
+            popup: "animate__animated animate__shakeX",
+          },
+        });
       return;
     }
     
@@ -129,11 +214,66 @@ export default function Pagar() {
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
     submitBtn.disabled = true;
     
-    setTimeout(() => {
-      alert('¡Pago procesado exitosamente! Tu pedido ha sido confirmado.');
-      submitBtn.innerHTML = originalText;
-      submitBtn.disabled = false;
-    }, 2000);
+// Guardar el estado original del botón
+
+submitBtn.innerHTML = `
+  <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+    <div class="spinner-border spinner-border-sm" 
+         style="width: 16px; height: 16px; border-width: 2px;"></div>
+    Procesando pago...
+  </div>
+`;
+submitBtn.disabled = true;
+
+// Simular el procesamiento del pago
+setTimeout(() => {
+  // Mostrar alerta de éxito con estilo
+  Swal.fire({
+    title: "¡Pago exitoso!",
+    html: `
+      <div style="text-align: center; padding: 15px;">
+        <i class="fa-solid fa-circle-check" 
+           style="font-size: 60px; color: #4ade80; margin-bottom: 15px; animation: pop 0.4s ease;"></i>
+        <p style="font-size: 16px; color: #000000ff; margin-bottom: 5px;">
+          ¡Pago procesado exitosamente!
+        </p>
+        <p style="font-size: 14px; color: #666; margin: 0;">
+          Tu pedido ha sido confirmado.
+        </p>
+      </div>
+    `,
+    color: "#262626ff",
+    confirmButtonColor: "#6366F1",
+    confirmButtonText: "Ver mis pedidos",
+    width: "420px",
+    customClass: {
+      popup: "swal2-glass",
+      confirmButton: "swal2-confirm-button"
+    },
+    showClass: {
+      popup: "animate__animated animate__fadeInDown"
+    },
+    hideClass: {
+      popup: "animate__animated animate__fadeOutUp"
+    }
+  }).then((result) => {
+    // Cuando el usuario hace clic en "Ver mis pedidos"
+    if (result.isConfirmed) {
+      // Navegar al perfil con la sección de pedidos activa
+      navigate('/Perfil', { 
+        state: { 
+          activeSection: 'orders'
+        } 
+      });
+    }
+  });
+
+  // Restaurar el botón
+  submitBtn.innerHTML = originalText;
+  submitBtn.disabled = false;
+}, 2000);
+
+
   };
 
   const handleBackToCart = () => {

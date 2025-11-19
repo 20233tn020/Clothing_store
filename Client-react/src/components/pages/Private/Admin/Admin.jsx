@@ -288,7 +288,7 @@ export default function Admin() {
                       <i className='fas fa-shopping-cart'></i>
                     </div>
                   </div>
-                  <div className={styles.card_value}>$24,580</div>
+                  <div className={styles.card_value}>$0</div>
                   <div className={styles.card_title}>+12% respecto al mes anterior</div>
                 </div>
                 <div className={styles.card}>
@@ -308,7 +308,7 @@ export default function Admin() {
                       <i className='fas fa-box'></i>
                     </div>
                   </div>
-                  <div className={styles.card_value}>365</div>
+                  <div className={styles.card_value}>0</div>
                   <div className={styles.card_title}>+8 productos nuevos</div>
                 </div>
                 <div className={styles.card}>
@@ -318,7 +318,7 @@ export default function Admin() {
                       <i className='fas fa-dollar-sign'></i>
                     </div>
                   </div>
-                  <div className={styles.card_value}>$18,420</div>
+                  <div className={styles.card_value}>$0</div>
                   <div className={styles.card_title}>+15% respecto al mes anterior</div>
                 </div>
               </div>

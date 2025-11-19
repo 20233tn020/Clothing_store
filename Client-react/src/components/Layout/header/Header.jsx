@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 
 export const Header = () => {
   const [user, setUser] = useState(null);
- // 🔹 Función para normalizar los datos del usuario
+ // Función para normalizar los datos del usuario
   const normalizeUser = (raw) => {
     if (!raw) return null;
     const r = typeof raw === "string" ? JSON.parse(raw) : raw;
@@ -21,19 +21,19 @@ export const Header = () => {
     };
   };
 
-  // 🔹 Cargar el usuario al montar el componente
+  //  Cargar el usuario al montar el componente
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) setUser(normalizeUser(storedUser));
 
-    // 🔸 Escucha los cambios en localStorage (otras pestañas)
+    //  Escucha los cambios en localStorage (otras pestañas)
     const handleStorageChange = (event) => {
       if (event.key === "user") {
         setUser(normalizeUser(event.newValue));
       }
     };
 
-    // 🔸 Escucha el evento personalizado (misma pestaña)
+    //  Escucha el evento personalizado (misma pestaña)
     const handleUserUpdated = (event) => {
       setUser(normalizeUser(event.detail));
     };
