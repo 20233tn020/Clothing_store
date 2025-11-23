@@ -1,0 +1,21 @@
+# =======================
+# CREACION / BACKEND (Flask)
+# ======================
+
+ Se CREO UNA API de nombre 'products' para extrer los articulos y mostrar 
+ Se CREO UNA API de nombre 'categorie' para extraer todas las categorias y mostrar
+
+# =======================
+# CREACION / Frontend (React+vite)
+# ======================
+
+Se creo  una interfaz interactiva para mostrar todos lo  productos de HOMBRE que tenemos y con sus categorias correspondientes=>src/components/Pagues/Private/Hombres
+Se creo  una interfaz interactiva para mostrar todos lo  productos de MUJER que tenemos y con sus categorias correspondientes =>  src/components/Pagues/Private/Mujer
+Se creo  una interfaz interactiva para mostrar todos lo  productos de ACCESORIOS que tenemos y con sus categorias correspondientes =>  src/components/Pagues/Private/Accesorios
+Se creo  una interfaz interactiva para mostrar todos lo  productos de OFERTAS que tenemos y con sus categorias correspondientes =>  src/components/Pagues/Private/OFERTAS
+
+#=======================
+# CORRECIONES
+# ======================
+
+Se actualizo el Header del Frontend para direcionar a las paginas que se crearon(productos)

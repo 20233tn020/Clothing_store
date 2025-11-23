@@ -60,27 +60,27 @@ export const Header = () => {
         <nav>
           <ul>
             <li><Link to={"/Shop"}><i className="fas fa-home"></i> Inicio</Link></li>
-            <li><a href="#"><i className="fas fa-male"></i> Hombres</a>
+            <li><Link to={"/Hombre"}><i className="fas fa-male"></i> Hombres</Link>
               <ul>
-                <li><a href="#">Camisas</a></li>
+                <li><Link to={"/ArtHombre"}>Camisas</Link></li>
                 <li><a href="#">Pantalones</a></li>
                 <li><a href="#">Chaquetas</a></li>
               </ul>
             </li>
-            <li><a href="#"><i className="fas fa-female"></i> Mujeres</a>
+            <li><Link to={"/Mujer"}><i className="fas fa-female"></i> Mujeres</Link>
               <ul>
                 <li><a href="#">Vestidos</a></li>
                 <li><a href="#">Blusas</a></li>
                 <li><a href="#">Zapatos</a></li>
               </ul>
             </li>
-            <li><a href="#"><i className="fas fa-gem"></i> Accesorios</a>
+            <li><Link to={"/Accesorios"}><i className="fas fa-gem"></i> Accesorios</Link>
               <ul>
                 <li><a href="#">Bolsos</a></li>
                 <li><a href="#">Relojes</a></li>
               </ul>
             </li>
-            <li><a href="#"><i className="fas fa-tag"></i> Ofertas</a></li>
+            <li><Link to={"/Ofertas"}><i className="fas fa-tag"></i> Ofertas</Link></li>
           </ul>
         </nav>
       
