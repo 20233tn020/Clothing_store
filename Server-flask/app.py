@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, session
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS, cross_origin
 from flask_mail import Mail, Message
-from models import db, User, Admin,Address
+from models import db, User, Admin,Address,Product,Category
 from sqlalchemy.exc import SQLAlchemyError
 import mysql.connector
 from mysql.connector import Error
@@ -759,6 +759,66 @@ def UpdatePasswordUser():
             "error": "Error interno del servidor",
             "detalles": str(e)
         }), 500
+
+# =====================================
+# OBTENER TODOS LOS PRODUCTOS
+# =====================================
+@app.route("/products", methods=["GET"])
+def get_all_products():
+    try:
+        products = Product.query.all()
+        products_list = []
+        
+        for product in products:
+            products_list.append({
+                "id": product.id,
+                "nombre": product.nombre,
+                "descripcion": product.descripcion,
+                "precio": float(product.precio),
+                "stock": product.stock,
+                "imagen_url": product.imagen_url,
+                "genero": product.genero,
+                "categoria_id": product.categoria_id,
+                "categoria_nombre": product.categoria.nombre if product.categoria else None,
+                "activo": product.activo,
+                "creado_en": product.creado_en.isoformat() if product.creado_en else None,
+                "actualizado_en": product.actualizado_en.isoformat() if product.actualizado_en else None
+            })
+        
+        return jsonify({
+            "status": "success",
+            "data": products_list,
+            "total": len(products_list)
+        }), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+# =====================================
+# OBTENER TODAS LAS CATEGORÍAS
+# =====================================
+@app.route("/categories", methods=["GET"])
+def get_all_categories():
+    try:
+        categories = Category.query.all()
+        categories_list = []
+        
+        for category in categories:
+            categories_list.append({
+                "id": category.id,
+                "nombre": category.nombre,
+                "descripcion": category.descripcion,
+                "total_productos": len(category.productos) if category.productos else 0
+            })
+        
+        return jsonify({
+            "status": "success",
+            "data": categories_list,
+            "total": len(categories_list)
+        }), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # =====================================
 # EJECUCIÓN

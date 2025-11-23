@@ -18,6 +18,11 @@ import Notifications from './components/Layout/notifications/notifications.jsx'
 import { Update_Password } from './components/pages/Private/Admin/Update_Password/Update_Password.jsx'
 import LogoutLink from './components/Auth/logout/LogoutLink.jsx'
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import ArtHombre from './components/pages/ArtHombre.jsx'
+import Hombre from './components/pages/Private/Hombre.jsx'
+import Mujer from './components/pages/Private/Mujer.jsx'
+import Accesorios from './components/pages/Private/Accesorios.jsx'
+import Ofertas from './components/pages/Private/Ofertas.jsx'
 export default function App() {
   return (
       <GoogleOAuthProvider clientId="915284224791-053n49a9auhgm7h1q90k3kfso8g52ktb.apps.googleusercontent.com">
@@ -42,6 +47,11 @@ export default function App() {
     <Route path='/Notifications' element={<Notifications/>}/>
     <Route path='/Update_Password' element={<Update_Password/>}/>
     <Route path='/LogoutLink' element={<LogoutLink/>}/>
+    <Route path='/ArtHombre' element={<ArtHombre/>}/>
+    <Route path='/Hombre' element={<Hombre/>}/>
+     <Route path='/Mujer' element={<Mujer/>}/>
+     <Route path='/Accesorios' element={<Accesorios/>}/>
+      <Route path='/Ofertas' element={<Ofertas/>}/>
        <Route path="*" element={<div>Página no encontrada</div>} />
     </Routes>
   )
