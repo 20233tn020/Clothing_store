@@ -5,6 +5,48 @@ import styles from './Hombre.module.css';
 import { Footer } from '../../Layout/footer/Footer';
 import { FloatingWhatsApp } from '../../FloatingWhatsApp/FloatingWhatsApp';
 
+// Servicio para manejar las llamadas a la API
+const apiService = {
+  async getProducts() {
+    try {
+      const response = await fetch('http://localhost:5000/products');
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      throw error;
+    }
+  },
+
+  async getCategories() {
+    try {
+      const response = await fetch('http://localhost:5000/categories');
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      throw error;
+    }
+  },
+
+  async getProductsByGender(gender) {
+    try {
+      const response = await fetch('http://localhost:5000/products');
+      const data = await response.json();
+      
+      if (data.status === 'success') {
+        return data.data.filter(product => 
+          product.genero && product.genero.toLowerCase() === gender.toLowerCase()
+        );
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching products by gender:', error);
+      throw error;
+    }
+  }
+};
+
 export default function Hombre() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -13,174 +55,153 @@ export default function Hombre() {
   const [sortBy, setSortBy] = useState('popularidad');
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState('grid');
+  const [applySearch, setApplySearch] = useState(false);
+  const [categories, setCategories] = useState([]);
   const productsPerPage = 12;
 
-  // Datos de ejemplo para la sección Hombre
-  const mockProducts = [
-    {
-      id: 1,
-      name: "Camiseta Básica Premium",
-      description: "Camiseta de algodón 100% de alta calidad, perfecta para looks casuales y elegantes.",
-      price: 29.99,
-      oldPrice: 39.99,
-      image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=500&q=80",
-      badge: "Nuevo",
-      rating: 4.5,
-      category: "camisetas",
-      stock: 15,
-      sizes: ["S", "M", "L", "XL"],
-      colors: ["Blanco", "Negro", "Azul", "Gris"],
-      details: "• 100% algodón orgánico\n• Corte regular fit\n• Cuello redondo\n• Lavable a máquina"
-    },
-    {
-      id: 2,
-      name: "Jeans Slim Fit Modernos",
-      description: "Jeans ajustados con tecnología stretch para máxima comodidad y estilo urbano.",
-      price: 59.99,
-      oldPrice: 79.99,
-      image: "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=500&q=80",
-      badge: "-25%",
-      rating: 4.8,
-      category: "pantalones",
-      stock: 8,
-      sizes: ["30", "32", "34", "36"],
-      colors: ["Azul oscuro", "Negro", "Gris"],
-      details: "• Denim elastano\n• Corte slim fit\n• Tecnología anti-arrugas\n• 5 bolsillos"
-    },
-    {
-      id: 3,
-      name: "Chaqueta Deportiva Performance",
-      description: "Chaqueta técnica para actividades outdoor con protección contra el viento y agua.",
-      price: 89.99,
-      image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=500&q=80",
-      badge: "Trending",
-      rating: 4.6,
-      category: "chaquetas",
-      stock: 12,
-      sizes: ["M", "L", "XL", "XXL"],
-      colors: ["Negro", "Azul marino", "Verde"],
-      details: "• Material técnico\n• Impermeable y transpirable\n• Capucha integrada\n• Bolsillos seguros"
-    },
-    {
-      id: 4,
-      name: "Zapatos Casuales Urbanos",
-      description: "Calzado urbano que combina estilo y comodidad para el día a día.",
-      price: 79.99,
-      oldPrice: 99.99,
-      image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=500&q=80",
-      badge: "Oferta",
-      rating: 4.7,
-      category: "calzado",
-      stock: 20,
-      sizes: ["40", "41", "42", "43", "44"],
-      colors: ["Marrón", "Negro", "Azul"],
-      details: "• Cuero genuino\n• Suela de goma\n• Plantilla acolchada\n• Estilo casual"
-    },
-    {
-      id: 5,
-      name: "Suéter de Lujo Merino",
-      description: "Suéter de lana merino ultraligero para máxima calidez y elegancia.",
-      price: 129.99,
-      image: "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=500&q=80",
-      badge: "Lujo",
-      rating: 4.9,
-      category: "sueters",
-      stock: 6,
-      sizes: ["S", "M", "L"],
-      colors: ["Gris oscuro", "Negro", "Burdeos"],
-      details: "• 100% lana merino\n• Ultra suave\n• Regulación térmica\n• Lavado a máquina"
-    },
-    {
-      id: 6,
-      name: "Shorts Deportivos Elite",
-      description: "Shorts técnicos para entrenamiento con tecnología de secado rápido.",
-      price: 34.99,
-      image: "https://images.unsplash.com/photo-1506629905607-e48b0e67d879?auto=format&fit=crop&w=500&q=80",
-      badge: "Deporte",
-      rating: 4.4,
-      category: "shorts",
-      stock: 25,
-      sizes: ["S", "M", "L", "XL"],
-      colors: ["Negro", "Gris", "Azul real"],
-      details: "• Tejido dry-fit\n• Secado rápido\n• Cintura elástica\n• Bolsillo para llaves"
-    },
-    {
-      id: 7,
-      name: "Camisa Formal Executive",
-      description: "Camisa de vestir en algodón egipcio para ocasiones formales y de negocios.",
-      price: 69.99,
-      oldPrice: 89.99,
-      image: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=500&q=80",
-      badge: "Executive",
-      rating: 4.8,
-      category: "camisas",
-      stock: 10,
-      sizes: ["M", "L", "XL"],
-      colors: ["Blanco", "Azul claro", "Rosa palo"],
-      details: "• Algodón egipcio\n• Corte slim fit\n• Planchado permanente\n• Botones de madreperla"
-    },
-    {
-      id: 8,
-      name: "Chándal Deportivo Completo",
-      description: "Conjunto deportivo de dos piezas para entrenamiento y lifestyle.",
-      price: 99.99,
-      image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=500&q=80",
-      badge: "Combo",
-      rating: 4.5,
-      category: "conjuntos",
-      stock: 18,
-      sizes: ["S", "M", "L", "XL"],
-      colors: ["Negro", "Gris", "Azul marino"],
-      details: "• 2 piezas\n• Material técnico\n• Bolsillos funcionales\n• Lavable a máquina"
-    }
-  ];
-
   useEffect(() => {
-    // Simular carga de API
-    const timer = setTimeout(() => {
-      setProducts(mockProducts);
-      setFilteredProducts(mockProducts);
-      setLoading(false);
-    }, 1500);
-
-    return () => clearTimeout(timer);
+    loadDataFromAPI();
   }, []);
 
-  // Filtrar y ordenar productos
+  const loadDataFromAPI = async () => {
+    try {
+      setLoading(true);
+      
+      // Cargar productos para hombre desde la API
+      const productsHombre = await apiService.getProductsByGender('hombre');
+      
+      if (productsHombre.length === 0) {
+        // Si no hay productos, usar datos mock como fallback
+        loadMockData();
+      } else {
+        setProducts(productsHombre);
+        setFilteredProducts(productsHombre);
+      }
+      
+      // Cargar categorías
+      const categoriesResponse = await apiService.getCategories();
+      if (categoriesResponse.status === 'success') {
+        setCategories(categoriesResponse.data);
+      }
+      
+    } catch (error) {
+      console.error('Error loading data from API:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'No se pudieron cargar los productos. Mostrando datos de ejemplo.',
+        icon: 'error',
+        confirmButtonText: 'Entendido'
+      });
+      loadMockData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Datos mock como fallback
+  const loadMockData = () => {
+    const mockProducts = [
+      {
+        id: 1,
+        nombre: "Camiseta Básica Premium",
+        descripcion: "Camiseta de algodón 100% de alta calidad, perfecta para looks casuales y elegantes.",
+        precio: 29.99,
+        imagen_url: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=500&q=80",
+        genero: "hombre",
+        categoria_id: 1,
+        categoria_nombre: "Camisetas",
+        stock: 15,
+        creado_en: new Date().toISOString(),
+        rating: 4.5,
+        tallas: ["S", "M", "L", "XL"],
+        colores: ["Blanco", "Negro", "Azul", "Gris"]
+      },
+      {
+        id: 2,
+        nombre: "Jeans Slim Fit Modernos",
+        descripcion: "Jeans ajustados con tecnología stretch para máxima comodidad y estilo urbano.",
+        precio: 59.99,
+        imagen_url: "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=500&q=80",
+        genero: "hombre",
+        categoria_id: 2,
+        categoria_nombre: "Pantalones",
+        stock: 8,
+        creado_en: new Date().toISOString(),
+        rating: 4.8,
+        tallas: ["30", "32", "34", "36"],
+        colores: ["Azul oscuro", "Negro", "Gris"]
+      },
+      {
+        id: 3,
+        nombre: "Chaqueta Deportiva Performance",
+        descripcion: "Chaqueta técnica para actividades outdoor con protección contra el viento y agua.",
+        precio: 89.99,
+        imagen_url: "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=500&q=80",
+        genero: "hombre",
+        categoria_id: 3,
+        categoria_nombre: "Chaquetas",
+        stock: 12,
+        creado_en: new Date().toISOString(),
+        rating: 4.6,
+        tallas: ["M", "L", "XL", "XXL"],
+        colores: ["Negro", "Azul marino", "Verde"]
+      },
+      {
+        id: 4,
+        nombre: "Zapatos Casuales Urbanos",
+        descripcion: "Calzado urbano que combina estilo y comodidad para el día a día.",
+        precio: 79.99,
+        imagen_url: "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=500&q=80",
+        genero: "hombre",
+        categoria_id: 4,
+        categoria_nombre: "Calzado",
+        stock: 20,
+        creado_en: new Date().toISOString(),
+        rating: 4.7,
+        tallas: ["40", "41", "42", "43", "44"],
+        colores: ["Marrón", "Negro", "Azul"]
+      }
+    ];
+    
+    setProducts(mockProducts);
+    setFilteredProducts(mockProducts);
+  };
+
+  // FILTRADO MANUAL - useEffect modificado
   useEffect(() => {
     let filtered = [...products];
 
-    // Filtrar por búsqueda
-    if (searchTerm) {
+    // Filtrar por búsqueda - solo si hay término de búsqueda
+    if (searchTerm.trim() !== '') {
       filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase())
+        product.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.descripcion.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.categoria_nombre && product.categoria_nombre.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
     // Ordenar
     switch (sortBy) {
       case 'precio_asc':
-        filtered.sort((a, b) => a.price - b.price);
+        filtered.sort((a, b) => a.precio - b.precio);
         break;
       case 'precio_desc':
-        filtered.sort((a, b) => b.price - a.price);
+        filtered.sort((a, b) => b.precio - a.precio);
         break;
       case 'nuevo':
-        filtered.sort((a, b) => b.id - a.id);
+        filtered.sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
         break;
       case 'valoracion':
-        filtered.sort((a, b) => b.rating - a.rating);
+        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
         break;
       default:
-        // Popularidad (por defecto)
-        filtered.sort((a, b) => b.rating - a.rating);
+        // Popularidad (por defecto) - ordenar por ID o rating
+        filtered.sort((a, b) => b.id - a.id);
     }
 
     setFilteredProducts(filtered);
     setCurrentPage(1);
-  }, [products, searchTerm, sortBy]);
+  }, [products, searchTerm, sortBy, applySearch]);
 
   // Paginación
   const indexOfLastProduct = currentPage * productsPerPage;
@@ -188,15 +209,349 @@ export default function Hombre() {
   const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
 
+  // OPCIÓN 2: Función handleSearch con filtrado manual
   const handleSearch = (e) => {
     e.preventDefault();
-    // La búsqueda se maneja automáticamente por el useEffect
+    
+    if (searchTerm.trim() === '') {
+      Swal.fire({
+        title: 'Búsqueda vacía',
+        text: 'Por favor ingresa un término de búsqueda',
+        icon: 'info',
+        timer: 2000
+      });
+      return;
+    }
+    
+    // Activar el filtrado manual
+    setApplySearch(prev => !prev);
+    console.log('Búsqueda manual realizada:', searchTerm);
+  };
+
+  // Función para manejar cambios en el input
+  const handleInputChange = (e) => {
+    setSearchTerm(e.target.value);
+    // Si el usuario borra el texto, mostrar todos los productos
+    if (e.target.value.trim() === '') {
+      setApplySearch(prev => !prev);
+    }
+  };
+
+  // Función para limpiar búsqueda
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setApplySearch(prev => !prev);
+  };
+
+  // Función auxiliar para obtener colores HEX
+  const getColorHex = (colorName) => {
+    const colorMap = {
+      'Blanco': '#ffffff',
+      'Negro': '#000000',
+      'Azul': '#3b82f6',
+      'Gris': '#6b7280',
+      'Azul oscuro': '#1e40af',
+      'Azul marino': '#1e3a8a',
+      'Verde': '#10b981',
+      'Marrón': '#92400e',
+      'Burdeos': '#831843',
+      'Azul real': '#1d4ed8',
+      'Rosa palo': '#fecdd3',
+      'Azul claro': '#93c5fd',
+      'Gris oscuro': '#374151'
+    };
+    return colorMap[colorName] || '#6b7280';
+  };
+
+  // Función para determinar badge del producto
+  const getProductBadge = (product) => {
+    if (product.stock === 0) return { text: 'Agotado', color: 'linear-gradient(135deg, #ef4444, #dc2626)' };
+    if (product.creado_en && new Date(product.creado_en) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) {
+      return { text: 'Nuevo', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' };
+    }
+    if (product.stock < 5) return { text: 'Últimas unidades', color: 'linear-gradient(135deg, #f59e0b, #d97706)' };
+    return null;
   };
 
   const handleQuickView = (product) => {
-    // Usar la función handleQuickView que ya tienes
-    // Aquí iría tu implementación de vista rápida
-    alert(`Vista rápida: ${product.name}`);
+    // Función para generar estrellas de rating
+    const generateRatingStars = (rating = 4.5) => {
+      let stars = '';
+      const fullStars = Math.floor(rating);
+      const hasHalfStar = rating % 1 !== 0;
+
+      for (let i = 1; i <= 5; i++) {
+        if (i <= fullStars) {
+          stars += '<i class="fas fa-star" style="color: #FFD700; font-size: 14px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);"></i>';
+        } else if (i === fullStars + 1 && hasHalfStar) {
+          stars += '<i class="fas fa-star-half-alt" style="color: #FFD700; font-size: 14px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);"></i>';
+        } else {
+          stars += '<i class="far fa-star" style="color: #FFD700; font-size: 14px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);"></i>';
+        }
+      }
+      return stars;
+    };
+
+    const badgeInfo = getProductBadge(product);
+    const productRating = product.rating || 4.5;
+
+    Swal.fire({
+      title: '',
+      html: `
+        <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 20px; overflow: hidden;">
+          
+          <!-- HEADER ELEGANTE -->
+          <div style="background: white; padding: 25px 30px 0; border-bottom: 1px solid #f1f5f9;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+              <div style="display: flex; align-items: center; gap: 15px;">
+                ${badgeInfo ? `
+                  <div style="background: ${badgeInfo.color}; color: white; padding: 10px 24px; border-radius: 30px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    ${badgeInfo.text}
+                  </div>
+                ` : ''}
+                <div style="display: flex; align-items: center; gap: 20px;">
+                  <div style="color: #64748b; font-size: 13px; font-weight: 600; background: #f8fafc; padding: 6px 12px; border-radius: 20px;">
+                    <i class="fas fa-hashtag" style="margin-right: 5px;"></i>SKU: ${String(product.id).padStart(6, '0')}
+                  </div>
+                  <div style="color: #10b981; font-size: 13px; font-weight: 600; background: #ecfdf5; padding: 6px 12px; border-radius: 20px;">
+                    <i class="fas fa-check-circle" style="margin-right: 5px;"></i>Verificado
+                  </div>
+                </div>
+              </div>
+                            <div class="social-share" style="display: flex; gap: 8px;">
+                <button style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #e2e8f0; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; color: #64748b;">
+                  <i class="fas fa-share-alt"></i>
+                </button>
+              </div>
+            </div>
+            
+          </div>
+
+          <div style="padding: 0;">
+            <div style="display: grid; grid-template-columns: 400px 1fr; min-height: 500px;">
+              
+              <!-- SIDEBAR DE IMAGEN -->
+              <div style="background: white; padding: 30px; border-right: 1px solid #f1f5f9; position: relative;">
+                
+                <!-- IMAGEN PRINCIPAL -->
+                <div style="position: relative; margin-bottom: 25px;">
+                  <div style="width: 100%; height: 350px; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.1); position: relative;">
+                    <img 
+                      src="${product.imagen_url}" 
+                      alt="${product.nombre}" 
+                      style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s ease;"
+                      onerror="this.src='https://via.placeholder.com/400x350/f8fafc/94a3b8?text=Imagen+Premium'"
+                    />
+                  </div>
+                  
+                  <!-- BADGE DE STOCK -->
+                  <div style="position: absolute; bottom: 20px; left: 20px;">
+                    <div style="background: ${product.stock > 0 ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #ef4444, #dc2626)'}; color: white; padding: 10px 20px; border-radius: 25px; font-weight: 700; font-size: 13px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px;">
+                      <i class="fas ${product.stock > 0 ? 'fa-check' : 'fa-clock'}"></i>
+                      ${product.stock > 0 ? `${product.stock} en stock` : 'Agotado'}
+                    </div>
+                  </div>
+                  
+                </div>
+
+                <!-- DETALLES DEL PRODUCTO -->
+                <div class="thumbnail-gallery" style="display: flex; gap: 12px; justify-content: center; padding: 20px 0;">
+                  <div class="thumbnail active" style="width: 70px; height: 70px; border-radius: 12px; overflow: hidden; border: 3px solid #3b82f6; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);">
+                    <img src="${product.imagen_url}" alt="Thumb 1" style="width: 100%; height: 100%; object-fit: cover;">
+                  </div>
+                  ${[2, 3, 4].map(i => `
+                    <div class="thumbnail" style="width: 70px; height: 70px; border-radius: 12px; overflow: hidden; border: 2px solid #e2e8f0; cursor: pointer; transition: all 0.3s ease; position: relative;">
+                      <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #f8fafc, #e2e8f0); display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 20px;">
+                        <i class="fas fa-plus"></i>
+                      </div>
+                      <div style="position: absolute; bottom: 5px; right: 5px; background: #64748b; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">
+                        +${i}
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+                <div class="side-features" style="background: white; border-radius: 16px; padding: 25px; margin-top: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                  <h4 style="color: #1e293b; font-size: 16px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-gem" style="color: #8b5cf6;"></i>
+                    Beneficios Exclusivos
+                  </h4>
+                  <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-shipping-fast" style="color: white; font-size: 14px;"></i>
+                      </div>
+                      <div>
+                        <div style="font-weight: 600; color: #1e293b; font-size: 14px;">Envío Express</div>
+                        <div style="color: #64748b; font-size: 12px;">Entrega en 24-48h</div>
+                      </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-shield-alt" style="color: white; font-size: 14px;"></i>
+                      </div>
+                      <div>
+                        <div style="font-weight: 600; color: #1e293b; font-size: 14px;">Garantía Extendida</div>
+                        <div style="color: #64748b; font-size: 12px;">2 años oficial</div>
+                      </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-undo" style="color: white; font-size: 14px;"></i>
+                      </div>
+                      <div>
+                        <div style="font-weight: 600; color: #1e293b; font-size: 14px;">Devolución Fácil</div>
+                        <div style="color: #64748b; font-size: 12px;">30 días sin preguntas</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CONTENIDO PRINCIPAL -->
+              <div style="background: white; padding: 30px; position: relative;">
+                
+                <!-- NOMBRE Y RATING -->
+                <div style="margin-bottom: 25px;">
+                  <h1 style="font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1.2; margin-bottom: 15px;">
+                    ${product.nombre}
+                  </h1>
+                  
+                  <div style="display: flex; align-items: center; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid #f1f5f9;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      ${generateRatingStars(productRating)}
+                      <span style="color: #475569; font-size: 15px; font-weight: 600; margin-left: 10px;">${productRating}/5</span>
+                    </div>
+                    <div style="color: #3b82f6; font-size: 14px; font-weight: 600; cursor: pointer;">
+                      42 reseñas verificadas
+                    </div>
+                  </div>
+                </div>
+
+                <!-- PRECIO -->
+                <div style="margin-bottom: 30px;">
+                  <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 10px;">
+                    <span style="font-size: 36px; font-weight: 900; color: #0f172a;">$${product.precio}</span>
+                  </div>
+                  <div style="color: #059669; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-tag"></i>
+                    Precio final • IVA incluido
+                  </div>
+                </div>
+
+                <!-- DESCRIPCIÓN -->
+                <div style="margin-bottom: 25px;">
+                  <p style="color: #64748b; line-height: 1.6; font-size: 14px;">
+                    ${product.descripcion}
+                  </p>
+                </div>
+
+                <!-- SELECTOR DE TALLA -->
+                <div style="margin-bottom: 25px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <label style="font-weight: 700; color: #1e293b; font-size: 16px;">Selecciona tu talla:</label>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+                    ${(product.tallas || ['S', 'M', 'L', 'XL']).map((talla, index) => `
+                      <button 
+                        type="button"
+                        style="padding: 16px 8px; border: 2px solid #e2e8f0; 
+                               background: white; 
+                               color: #475569; 
+                               border-radius: 12px; 
+                               font-weight: 700;
+                               font-size: 15px;
+                               cursor: pointer;
+                               transition: all 0.3s ease;"
+                      >
+                        ${talla}
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+
+                <!-- SELECTOR DE COLOR -->
+                <div style="margin-bottom: 30px;">
+                  <label style="font-weight: 700; color: #1e293b; font-size: 16px; display: block; margin-bottom: 15px;">Color:</label>
+                  <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    ${(product.colores || ['Blanco', 'Negro', 'Azul']).map((color, index) => `
+                      <button 
+                        type="button"
+                        style="padding: 14px 20px; 
+                               border: 2px solid #e2e8f0; 
+                               background: white; 
+                               color: #475569; 
+                               border-radius: 12px; 
+                               font-weight: 600;
+                               cursor: pointer;
+                               transition: all 0.3s ease;
+                               display: flex;
+                               align-items: center;
+                               gap: 10px;"
+                      >
+                        <div style="width: 20px; height: 20px; border-radius: 50%; background: ${getColorHex(color)}; border: 2px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
+                        ${color}
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+
+                <!-- BOTÓN DE ACCIÓN -->
+                <div style="display: flex; gap: 15px; align-items: center;">
+                  <button 
+                    style="height: 54px; 
+                           flex: 1;
+                           background: ${product.stock > 0 ? 'linear-gradient(135deg, #0f172a, #1e293b)' : '#94a3b8'}; 
+                           color: white; 
+                           border: none; 
+                           border-radius: 12px; 
+                           font-weight: 700; 
+                           font-size: 16px;
+                           cursor: ${product.stock > 0 ? 'pointer' : 'not-allowed'};
+                           transition: all 0.3s ease;
+                           display: flex;
+                           align-items: center;
+                           justify-content: center;
+                           gap: 12px;
+                           box-shadow: 0 8px 25px rgba(0,0,0,0.15);"
+                    onclick="handleAddToCart(${product.id})"
+                  >
+                    <i class="fas fa-shopping-cart"></i>
+                    ${product.stock > 0 ? 'Agregar al Carrito' : 'Producto Agotado'}
+                  </button>
+                </div>
+
+                <!-- GARANTÍA -->
+                <div style="background: linear-gradient(135deg, #fef7ed, #fffbeb); border: 1px solid #fed7aa; border-radius: 16px; padding: 20px; margin-top: 25px;">
+                  <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center;">
+                      <i class="fas fa-crown" style="color: white; font-size: 16px;"></i>
+                    </div>
+                    <div>
+                      <div style="font-weight: 800; color: #92400e; font-size: 16px; margin-bottom: 4px;">Garantía Premium</div>
+                      <div style="color: #b45309; font-size: 14px;">Este producto incluye 1 año de garantía y soporte premium</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
+      width: 1000,
+      showCloseButton: true,
+      showConfirmButton: false,
+      focusConfirm: false,
+      didOpen: () => {
+        // Agregar event listeners para los botones dentro del modal
+        const addToCartBtn = document.querySelector('[onclick*="handleAddToCart"]');
+        if (addToCartBtn) {
+          addToCartBtn.onclick = () => {
+            handleAddToCart(product.id);
+            Swal.close();
+          };
+        }
+      }
+    });
   };
 
   const handleAddToWishlist = (productId) => {
@@ -215,32 +570,31 @@ export default function Hombre() {
       title: '¡Producto Agregado!',
       html: `
         <div style="text-align: center;">
-          <img src="${product.image}" alt="${product.name}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 10px; margin-bottom: 15px;"/>
-          <p><strong>${product.name}</strong></p>
-          <p>Precio: $${product.price}</p>
+          <img src="${product.imagen_url}" alt="${product.nombre}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 10px; margin-bottom: 15px;"/>
+          <p><strong>${product.nombre}</strong></p>
+          <p>Precio: $${product.precio}</p>
         </div>
       `,
       icon: 'success',
-      confirmButtonText: 'Continuar',
-      confirmButtonColor: '#10b981'
+      showCancelButton: true,
+      confirmButtonText: 'Ver Carrito',
+      cancelButtonText: 'Seguir Comprando',
+      confirmButtonColor: '#007bff'
     });
   };
 
-  const renderRatingStars = (rating) => {
+  const renderRatingStars = (rating = 4.5) => {
     const stars = [];
     const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
 
     for (let i = 1; i <= 5; i++) {
       if (i <= fullStars) {
         stars.push(<i key={i} className="fas fa-star"></i>);
-      } else if (i === fullStars + 1 && hasHalfStar) {
-        stars.push(<i key={i} className="fas fa-star-half-alt"></i>);
       } else {
         stars.push(<i key={i} className="far fa-star"></i>);
       }
     }
-    return stars;
+    return <span className={styles.ratingStars}>{stars}</span>;
   };
 
   if (loading) {
@@ -269,7 +623,7 @@ export default function Hombre() {
         
         <div className={styles.heroStats}>
           <div className={styles.statItem}>
-            <span className={styles.statNumber}>500+</span>
+            <span className={styles.statNumber}>{products.length}+</span>
             <span className={styles.statLabel}>Productos</span>
           </div>
           <div className={styles.statItem}>
@@ -292,11 +646,21 @@ export default function Hombre() {
               className={styles.searchInput}
               placeholder="Buscar en moda masculina..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleInputChange}
             />
             <button type="submit" className={styles.searchButton}>
               <i className="fas fa-search"></i>
             </button>
+            {searchTerm && (
+              <button 
+                type="button"
+                className={styles.clearButton}
+                onClick={handleClearSearch}
+                title="Limpiar búsqueda"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            )}
           </form>
 
           <div className={styles.filterControls}>
@@ -335,6 +699,11 @@ export default function Hombre() {
         <div className={styles.productsHeader}>
           <div className={styles.resultsCount}>
             {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''} encontrado{filteredProducts.length !== 1 ? 's' : ''} para hombre
+            {searchTerm && (
+              <span className={styles.searchFilter}>
+                para "{searchTerm}"
+              </span>
+            )}
           </div>
         </div>
 
@@ -345,69 +714,87 @@ export default function Hombre() {
             </div>
             <h3>No se encontraron productos</h3>
             <p>Intenta con otros términos de búsqueda o ajusta los filtros</p>
+            {searchTerm && (
+              <button 
+                className={styles.clearSearchBtn}
+                onClick={handleClearSearch}
+              >
+                Limpiar búsqueda
+              </button>
+            )}
           </div>
         ) : (
           <>
-            <div className={styles.productsGrid}>
-              {currentProducts.map((product) => (
-                <div key={product.id} className={styles.productCard}>
-                  {product.badge && (
-                    <div className={styles.productBadge}>{product.badge}</div>
-                  )}
-                  
-                  <div className={styles.productImage}>
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/300x300/f8fafc/94a3b8?text=Imagen+No+Disponible';
-                      }}
-                    />
-                    <div className={styles.productActions}>
-                      <button 
-                        className={styles.actionButton}
-                        onClick={() => handleQuickView(product)}
+            <div className={viewMode === 'grid' ? styles.productsGrid : styles.productsList}>
+              {currentProducts.map((product) => {
+                const badgeInfo = getProductBadge(product);
+                
+                return (
+                  <div key={product.id} className={styles.productCard}>
+                    {badgeInfo && (
+                      <div 
+                        className={styles.productBadge}
+                        style={{background: badgeInfo.color}}
                       >
-                        <i className="fas fa-eye"></i>
-                      </button>
-                      <button 
-                        className={styles.actionButton}
-                        onClick={() => handleAddToWishlist(product.id)}
-                      >
-                        <i className="fas fa-heart"></i>
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className={styles.productInfo}>
-                    <h3 className={styles.productTitle}>{product.name}</h3>
-                    <p className={styles.productDescription}>{product.description}</p>
-                    
-                    <div className={styles.productRating}>
-                      <span className={styles.ratingStars}>
-                        {renderRatingStars(product.rating)}
-                      </span>
-                      <span className={styles.ratingCount}>({product.rating})</span>
-                    </div>
-                    
-                    <div className={styles.productPrice}>
-                      <div className={styles.priceContainer}>
-                        {product.oldPrice && (
-                          <span className={styles.oldPrice}>${product.oldPrice}</span>
-                        )}
-                        <span className={styles.currentPrice}>${product.price}</span>
+                        {badgeInfo.text}
                       </div>
-                      <button 
-                        className={styles.addToCartButton}
-                        onClick={() => handleAddToCart(product.id)}
-                        disabled={product.stock === 0}
-                      >
-                        <i className="fas fa-shopping-cart"></i>
-                      </button>
+                    )}
+                    
+                    <div className={styles.productImage}>
+                      <img
+                        src={product.imagen_url}
+                        alt={product.nombre}
+                        onError={(e) => {
+                          e.target.src = 'https://via.placeholder.com/300x300/f8fafc/94a3b8?text=Imagen+No+Disponible';
+                        }}
+                      />
+                      <div className={styles.productActions}>
+                        <button 
+                          className={styles.actionButton}
+                          onClick={() => handleQuickView(product)}
+                        >
+                          <i className="fas fa-eye"></i>
+                        </button>
+                        <button 
+                          className={styles.actionButton}
+                          onClick={() => handleAddToWishlist(product.id)}
+                        >
+                          <i className="fas fa-heart"></i>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className={styles.productInfo}>
+                      <h3 className={styles.productTitle}>{product.nombre}</h3>
+                      <p className={styles.productDescription}>{product.descripcion}</p>
+                      
+                      <div className={styles.productCategory}>
+                        {product.categoria_nombre}
+                      </div>
+                      
+                      <div className={styles.productRating}>
+                        <span className={styles.ratingStars}>
+                          {renderRatingStars(product.rating || 4.5)}
+                        </span>
+                        <span className={styles.ratingCount}>({product.rating || 4.5})</span>
+                      </div>
+                      
+                      <div className={styles.productPrice}>
+                        <div className={styles.priceContainer}>
+                          <span className={styles.currentPrice}>${product.precio}</span>
+                        </div>
+                        <button 
+                          className={styles.addToCartButton}
+                          onClick={() => handleAddToCart(product.id)}
+                          disabled={product.stock === 0}
+                        >
+                          <i className="fas fa-shopping-cart"></i>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* PAGINATION */}
@@ -443,8 +830,8 @@ export default function Hombre() {
           </>
         )}
       </section>
-                  <Footer/>
-                  <FloatingWhatsApp/>
+      <Footer/>
+      <FloatingWhatsApp/>
     </div>
   );
 }

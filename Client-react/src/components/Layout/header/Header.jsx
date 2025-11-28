@@ -63,8 +63,8 @@ export const Header = () => {
             <li><Link to={"/Hombre"}><i className="fas fa-male"></i> Hombres</Link>
               <ul>
                 <li><Link to={"/ArtHombre"}>Camisas</Link></li>
-                <li><a href="#">Pantalones</a></li>
-                <li><a href="#">Chaquetas</a></li>
+                <li><Link to={"/PantalonHombres"}>Pantalones</Link></li>
+                <li><Link to={"/Chaquetas"}>Chaquetas</Link></li>
               </ul>
             </li>
             <li><Link to={"/Mujer"}><i className="fas fa-female"></i> Mujeres</Link>
