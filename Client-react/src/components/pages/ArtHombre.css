@@ -1,3 +1,25 @@
+/* Estilos para el botón de favoritos */
+.art-product-actions button.favorited {
+  color: #ef4444 !important;
+}
+
+.art-product-actions button .fa-heart.active {
+  color: #ef4444;
+}
+
+.art-product-actions button:hover .fa-heart {
+  color: #ef4444;
+  transform: scale(1.1);
+  transition: all 0.3s ease;
+}
+
+/* Estilos para el botón de favoritos en el modal */
+#favorite-btn:hover {
+  background: #fef2f2 !important;
+  border-color: #ef4444 !important;
+}
+
+
 
 .art-product-badge.agotado {
   background: linear-gradient(135deg, #ef4444, #dc2626);

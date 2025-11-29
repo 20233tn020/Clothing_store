@@ -1,0 +1,18 @@
+# =======================
+# CREACION / BACKEND (Flask)
+# ======================
+
+ Se CREO UNA API  para CONTAR FAVORITOS DE UN USUARIO 
+ Se CREO UNA API para VERIFICAR SI UN PRODUCTO ESTÁ EN FAVORITOS 
+ SE CREO UNA API para OBTENER TODOS LOS FAVORITOS DE UN USUARIO 
+ SE CREO UNA API para ELIMINAR PRODUCTO DE FAVORITOS
+ SE CREO UNA API para AGREGAR PRODUCTO A FAVORITOS
+
+
+#=======================
+# CORRECIONES
+# ======================
+
+Se actualizo el Header del Frontend para mostrar la cantidad de favoritos que hay..
+Se actualizo la interfaz de favoritos.jsx para mostrar los artiuculos y aplicar los filtros 
+

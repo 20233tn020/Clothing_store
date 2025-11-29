@@ -44,6 +44,78 @@ const apiService = {
       console.error('Error fetching products by gender:', error);
       throw error;
     }
+  },
+
+  // SERVICIO DE FAVORITOS
+  async getFavorites(userId) {
+    try {
+      const response = await fetch(`http://localhost:5000/favorites/${userId}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+      throw error;
+    }
+  },
+
+  async addToFavorites(userId, productId) {
+    try {
+      const response = await fetch('http://localhost:5000/favorites/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          product_id: productId
+        })
+      });
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error adding to favorites:', error);
+      throw error;
+    }
+  },
+
+  async removeFromFavorites(userId, productId) {
+    try {
+      const response = await fetch('http://localhost:5000/favorites/remove', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          product_id: productId
+        })
+      });
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error removing from favorites:', error);
+      throw error;
+    }
+  },
+
+  async checkFavorite(userId, productId) {
+    try {
+      const response = await fetch('http://localhost:5000/favorites/check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          product_id: productId
+        })
+      });
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error checking favorite:', error);
+      throw error;
+    }
   }
 };
 
@@ -52,16 +124,139 @@ export default function Hombre() {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('popularidad');
+  const [sortBy, setSortBy] = useState('aleatorio');
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState('grid');
   const [applySearch, setApplySearch] = useState(false);
   const [categories, setCategories] = useState([]);
+  
+  // ESTADOS PARA FAVORITOS
+  const [favorites, setFavorites] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState(null);
+
   const productsPerPage = 12;
 
+  // Obtener el usuario del localStorage
   useEffect(() => {
-    loadDataFromAPI();
+    const getCurrentUser = () => {
+      const userData = localStorage.getItem('user');
+      console.log('🔍 User data from localStorage:', userData);
+      
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          console.log('✅ User parsed:', user);
+          setCurrentUserId(user.id);
+        } catch (error) {
+          console.error('❌ Error parsing user data:', error);
+        }
+      } else {
+        console.warn('⚠️ No hay usuario logueado en localStorage');
+      }
+    };
+    
+    getCurrentUser();
   }, []);
+
+  // useEffect principal - AHORA DEPENDE DE currentUserId
+  useEffect(() => {
+    console.log('🎯 Main useEffect running, currentUserId:', currentUserId);
+    loadDataFromAPI();
+    
+    if (currentUserId) {
+      console.log('👤 Loading favorites for user:', currentUserId);
+      loadUserFavorites();
+    } else {
+      console.log('⏳ Waiting for user ID to load favorites...');
+    }
+  }, [currentUserId]);
+
+  // Cargar favoritos del usuario
+  const loadUserFavorites = async () => {
+    if (!currentUserId) {
+      console.warn('⏹️ Cannot load favorites: no user ID');
+      return;
+    }
+
+    try {
+      console.log('🔄 Loading favorites for user:', currentUserId);
+      const favoritesData = await apiService.getFavorites(currentUserId);
+      if (favoritesData.status === 'success') {
+        const favoriteIds = favoritesData.data.map(fav => fav.producto.id);
+        console.log('✅ Favorites loaded:', favoriteIds);
+        setFavorites(favoriteIds);
+      } else {
+        console.error('❌ Error in favorites response:', favoritesData);
+      }
+    } catch (error) {
+      console.error('❌ Error loading favorites:', error);
+    }
+  };
+
+  // Verificar si un producto es favorito
+  const isProductFavorite = (productId) => {
+    return favorites.includes(productId);
+  };
+
+  // Manejar toggle de favoritos
+  const handleToggleFavorite = async (productId) => {
+    // Verificar que el usuario esté logueado
+    if (!currentUserId) {
+      Swal.fire({
+        title: 'Inicia sesión',
+        text: 'Debes iniciar sesión para agregar productos a favoritos',
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        timer: 3000
+      });
+      return;
+    }
+
+    try {
+      const isCurrentlyFavorite = isProductFavorite(productId);
+      console.log('🎯 Toggle favorite - Product:', productId, 'User:', currentUserId, 'Currently favorite:', isCurrentlyFavorite);
+      
+      if (isCurrentlyFavorite) {
+        // Remover de favoritos
+        const result = await apiService.removeFromFavorites(currentUserId, productId);
+        if (result.status === 'success') {
+          setFavorites(prev => prev.filter(id => id !== productId));
+          Swal.fire({
+            title: 'Removido de Favoritos',
+            text: 'El producto se ha removido de tus favoritos',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        } else {
+          throw new Error(result.message || 'Error al remover de favoritos');
+        }
+      } else {
+        // Agregar a favoritos
+        const result = await apiService.addToFavorites(currentUserId, productId);
+        if (result.status === 'success') {
+          setFavorites(prev => [...prev, productId]);
+          Swal.fire({
+            title: '¡Agregado a Favoritos!',
+            text: 'El producto se ha agregado a tus favoritos',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        } else {
+          throw new Error(result.message || 'Error al agregar a favoritos');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error toggling favorite:', error);
+      Swal.fire({
+        title: 'Error',
+        text: error.message || 'No se pudo actualizar tus favoritos',
+        icon: 'error',
+        timer: 2000
+      });
+    }
+  };
 
   const loadDataFromAPI = async () => {
     try {
@@ -167,6 +362,16 @@ export default function Hombre() {
     setFilteredProducts(mockProducts);
   };
 
+  // Función para mezclar array aleatoriamente (Fisher-Yates shuffle)
+  const shuffleArray = (array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   // FILTRADO MANUAL - useEffect modificado
   useEffect(() => {
     let filtered = [...products];
@@ -194,6 +399,10 @@ export default function Hombre() {
       case 'valoracion':
         filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
         break;
+      case 'aleatorio':
+        // Mezclar aleatoriamente
+        filtered = shuffleArray(filtered);
+        break;
       default:
         // Popularidad (por defecto) - ordenar por ID o rating
         filtered.sort((a, b) => b.id - a.id);
@@ -209,7 +418,7 @@ export default function Hombre() {
   const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
 
-  // OPCIÓN 2: Función handleSearch con filtrado manual
+  // Función handleSearch con filtrado manual
   const handleSearch = (e) => {
     e.preventDefault();
     
@@ -294,6 +503,7 @@ export default function Hombre() {
 
     const badgeInfo = getProductBadge(product);
     const productRating = product.rating || 4.5;
+    const isFavorite = isProductFavorite(product.id);
 
     Swal.fire({
       title: '',
@@ -318,13 +528,18 @@ export default function Hombre() {
                   </div>
                 </div>
               </div>
-                            <div class="social-share" style="display: flex; gap: 8px;">
+              <div class="social-share" style="display: flex; gap: 8px;">
+                <button 
+                  id="favorite-btn" 
+                  style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #e2e8f0; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; color: ${isFavorite ? '#ef4444' : '#64748b'};"
+                >
+                  <i class="fas fa-heart"></i>
+                </button>
                 <button style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #e2e8f0; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; color: #64748b;">
                   <i class="fas fa-share-alt"></i>
                 </button>
               </div>
             </div>
-            
           </div>
 
           <div style="padding: 0;">
@@ -351,7 +566,6 @@ export default function Hombre() {
                       ${product.stock > 0 ? `${product.stock} en stock` : 'Agotado'}
                     </div>
                   </div>
-                  
                 </div>
 
                 <!-- DETALLES DEL PRODUCTO -->
@@ -370,6 +584,7 @@ export default function Hombre() {
                     </div>
                   `).join('')}
                 </div>
+
                 <div class="side-features" style="background: white; border-radius: 16px; padding: 25px; margin-top: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
                   <h4 style="color: #1e293b; font-size: 16px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
                     <i class="fas fa-gem" style="color: #8b5cf6;"></i>
@@ -550,17 +765,18 @@ export default function Hombre() {
             Swal.close();
           };
         }
-      }
-    });
-  };
 
-  const handleAddToWishlist = (productId) => {
-    Swal.fire({
-      title: '¡Agregado a Favoritos!',
-      text: 'El producto se ha agregado a tu lista de deseos',
-      icon: 'success',
-      confirmButtonText: 'Continuar',
-      timer: 2000
+        // Event listener para el botón de favoritos en el modal
+        const favoriteBtn = document.getElementById('favorite-btn');
+        if (favoriteBtn) {
+          favoriteBtn.onclick = () => {
+            handleToggleFavorite(product.id);
+            // Actualizar el color del corazón inmediatamente
+            const isCurrentlyFavorite = isProductFavorite(product.id);
+            favoriteBtn.style.color = !isCurrentlyFavorite ? '#ef4444' : '#64748b';
+          };
+        }
+      }
     });
   };
 
@@ -669,7 +885,8 @@ export default function Hombre() {
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
-              <option value="popularidad">Ordenar por: Popularidad</option>
+              <option value="aleatorio">Ordenar por: Aleatorio</option>
+              <option value="popularidad">Popularidad</option>
               <option value="precio_asc">Precio: Menor a Mayor</option>
               <option value="precio_desc">Precio: Mayor a Menor</option>
               <option value="nuevo">Más Nuevos</option>
@@ -728,6 +945,7 @@ export default function Hombre() {
             <div className={viewMode === 'grid' ? styles.productsGrid : styles.productsList}>
               {currentProducts.map((product) => {
                 const badgeInfo = getProductBadge(product);
+                const isFavorite = isProductFavorite(product.id);
                 
                 return (
                   <div key={product.id} className={styles.productCard}>
@@ -756,10 +974,11 @@ export default function Hombre() {
                           <i className="fas fa-eye"></i>
                         </button>
                         <button 
-                          className={styles.actionButton}
-                          onClick={() => handleAddToWishlist(product.id)}
+                          className={`${styles.actionButton} ${isFavorite ? styles.favorited : ''}`}
+                          onClick={() => handleToggleFavorite(product.id)}
+                          title={isFavorite ? "Remover de favoritos" : "Añadir a favoritos"}
                         >
-                          <i className="fas fa-heart"></i>
+                          <i className={`fas fa-heart ${isFavorite ? styles.active : ''}`}></i>
                         </button>
                       </div>
                     </div>

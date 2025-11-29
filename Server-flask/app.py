@@ -2,10 +2,11 @@ from flask import Flask, request, jsonify, session
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS, cross_origin
 from flask_mail import Mail, Message
-from models import db, User, Admin,Address,Product,Category
+from models import db, User, Admin,Address,Product,Category,Favorite
 from sqlalchemy.exc import SQLAlchemyError
 import mysql.connector
 from mysql.connector import Error
+from datetime import datetime
 
 # =====================================
 # CONFIGURACIÓN INICIAL
@@ -822,12 +823,303 @@ def get_all_categories():
 
 
 
+# =====================================
+# AGREGAR PRODUCTO A FAVORITOS
+# =====================================
+@app.route("/favorites/add", methods=["POST"])
+def add_to_favorites():
+    try:
+        data = request.get_json()
+        
+        # Validar datos requeridos
+        if not data or 'user_id' not in data or 'product_id' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "Se requieren user_id y product_id"
+            }), 400
+        
+        user_id = data['user_id']
+        product_id = data['product_id']
+        
+        # Verificar si el usuario existe
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "Usuario no encontrado"
+            }), 404
+        
+        # Verificar si el producto existe y está activo
+        product = Product.query.get(product_id)
+        if not product:
+            return jsonify({
+                "status": "error",
+                "message": "Producto no encontrado"
+            }), 404
+        
+        if not product.activo:
+            return jsonify({
+                "status": "error",
+                "message": "El producto no está disponible"
+            }), 400
+        
+        # Verificar si ya está en favoritos
+        existing_favorite = Favorite.query.filter_by(
+            user_id=user_id, 
+            product_id=product_id
+        ).first()
+        
+        if existing_favorite:
+            return jsonify({
+                "status": "error",
+                "message": "El producto ya está en tus favoritos"
+            }), 400
+        
+        # Crear nuevo favorito
+        new_favorite = Favorite(
+            user_id=user_id,
+            product_id=product_id,
+            agregado_en=datetime.utcnow()
+        )
+        
+        db.session.add(new_favorite)
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Producto agregado a favoritos",
+            "data": {
+                "favorite_id": new_favorite.id,
+                "user_id": user_id,
+                "product_id": product_id,
+                "agregado_en": new_favorite.agregado_en.isoformat(),
+                "producto": {
+                    "nombre": product.nombre,
+                    "precio": float(product.precio),
+                    "imagen_url": product.imagen_url
+                }
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": f"Error al agregar a favoritos: {str(e)}"
+        }), 500
+# =====================================
+# ELIMINAR PRODUCTO DE FAVORITOS
+# =====================================
+@app.route("/favorites/remove", methods=["DELETE"])
+def remove_from_favorites():
+    try:
+        data = request.get_json()
+        
+        # Validar datos requeridos
+        if not data or 'user_id' not in data or 'product_id' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "Se requieren user_id y product_id"
+            }), 400
+        
+        user_id = data['user_id']
+        product_id = data['product_id']
+        
+        # Buscar el favorito
+        favorite = Favorite.query.filter_by(
+            user_id=user_id, 
+            product_id=product_id
+        ).first()
+        
+        if not favorite:
+            return jsonify({
+                "status": "error",
+                "message": "El producto no está en tus favoritos"
+            }), 404
+        
+        # Eliminar el favorito
+        db.session.delete(favorite)
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Producto eliminado de favoritos",
+            "data": {
+                "user_id": user_id,
+                "product_id": product_id
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": f"Error al eliminar de favoritos: {str(e)}"
+        }), 500
+# =====================================
+# OBTENER TODOS LOS FAVORITOS DE UN USUARIO 
+# =====================================
+@app.route("/favorites/<user_id>", methods=["GET"])
+def get_user_favorites(user_id):
+    try:
+        # Verificar si el usuario existe
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "Usuario no encontrado"
+            }), 404
 
-# ====================================
-# AÑADDIR ARTICULOS 
-#====================================
+        # Obtener todos los favoritos del usuario con información completa del producto
+        favorites = Favorite.query.filter_by(user_id=user_id).all()
+        
+        favorites_list = []
+        for favorite in favorites:
+            product = Product.query.get(favorite.product_id)
+            if product:  # Solo si el producto existe
+                product_data = {
+                    "id": product.id,
+                    "nombre": product.nombre,
+                    "descripcion": product.descripcion,
+                    "precio": float(product.precio),
+                    "stock": product.stock,
+                    "imagen_url": product.imagen_url,
+                    "genero": product.genero,
+                    "categoria_id": product.categoria_id,
+                    "activo": product.activo
+                }
+                
+                # Agregar categoría nombre si existe
+                if product.categoria:
+                    product_data["categoria_nombre"] = product.categoria.nombre
+                
+                # Agregar fechas si existen
+                if product.creado_en:
+                    product_data["creado_en"] = product.creado_en.isoformat()
+                
+                favorites_list.append({
+                    "favorite_id": favorite.id,
+                    "agregado_en": favorite.agregado_en.isoformat() if favorite.agregado_en else None,
+                    "producto": product_data
+                })
+        
+        return jsonify({
+            "status": "success",
+            "data": favorites_list,
+            "total": len(favorites_list),
+            "user_info": {
+                "user_id": user.id,
+                "nombre": f"{user.Nombre} {user.Apellido}",
+                "email": user.Email
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Error al obtener favoritos: {str(e)}"
+        }), 500
+# =====================================
+# VERIFICAR SI UN PRODUCTO ESTÁ EN FAVORITOS 
+# =====================================
+@app.route("/favorites/check", methods=["POST"])
+def check_favorite():
+    try:
+        data = request.get_json()
+        
+        # Validar datos requeridos
+        if not data or 'user_id' not in data or 'product_id' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "Se requieren user_id y product_id"
+            }), 400
+        
+        user_id = data['user_id']
+        product_id = data['product_id']
+        
+        # Verificar si el usuario existe
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "Usuario no encontrado"
+            }), 404
+        
+        # Verificar si el producto existe
+        product = Product.query.get(product_id)
+        if not product:
+            return jsonify({
+                "status": "error",
+                "message": "Producto no encontrado"
+            }), 404
+        
+        # Verificar si existe en favoritos
+        favorite = Favorite.query.filter_by(
+            user_id=user_id, 
+            product_id=product_id
+        ).first()
+        
+        is_favorite = favorite is not None
+        
+        response_data = {
+            "is_favorite": is_favorite
+        }
+        
+        # Solo agregar estos campos si existe el favorito
+        if favorite:
+            response_data.update({
+                "favorite_id": favorite.id,
+                "agregado_en": favorite.agregado_en.isoformat() if favorite.agregado_en else None
+            })
+        
+        return jsonify({
+            "status": "success",
+            "data": response_data
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Error al verificar favorito: {str(e)}"
+        }), 500
 
-         
+# =====================================
+# CONTAR FAVORITOS DE UN USUARIO
+# =====================================
+@app.route("/favorites/<user_id>/count", methods=["GET"])
+def count_user_favorites(user_id):
+    try:
+        # Verificar si el usuario existe
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "Usuario no encontrado"
+            }), 404
+        
+        # Contar favoritos del usuario
+        favorites_count = Favorite.query.filter_by(user_id=user_id).count()
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "user_id": user_id,
+                "total_favorites": favorites_count,
+                "user_info": {
+                    "nombre": f"{user.Nombre} {user.Apellido}",
+                    "email": user.Email
+                }
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Error al contar favoritos: {str(e)}"
+        }), 500
+
+
+
 
 # =====================================
 # EJECUCIÓN
