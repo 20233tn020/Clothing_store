@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+  import { useState, useEffect } from "react";
 import { Header, Mi_Cuenta } from "../../Layout/header/Header";
 import { Footer } from "../../Layout/footer/Footer";
 import { FloatingWhatsApp } from "../../FloatingWhatsApp/FloatingWhatsApp";
@@ -8,20 +8,66 @@ import "react-profile/themes/default";
 import { openEditor } from "react-profile";
 import axios from "axios";
 import Swal from "sweetalert2";
-import { useLocation } from "react-router-dom"; // Correcto
+import { useLocation,useNavigate,useSearchParams } from "react-router-dom"; // Correcto
+
+// Servicio para manejar las llamadas a la API
+const apiService = {
+  async getUserOrders(userId) {
+    try {
+      const response = await fetch(`http://localhost:5000/orders/user/${userId}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      throw error;
+    }
+  },
+
+  async getOrderDetails(orderId) {
+    try {
+      const response = await fetch(`http://localhost:5000/orders/${orderId}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+      throw error;
+    }
+  }
+};
+
+
+
+
 
 export default function Perfil() {
 const location = useLocation();
+const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("personal");
   // Direcciones del usuario desde la API
   const [addresses, setAddresses] = useState([]);
+
+    const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   const [formData, setFormData] = useState({
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
   });
+
+   useEffect(() => {
+    console.log(' Location state recibido:', location.state);
+    
+    if (location.state?.activeSection) {
+      console.log(' Cambiando a sección:', location.state.activeSection);
+      setActiveSection(location.state.activeSection);
+      
+      // Opcional: Limpiar el state para evitar que persista
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
 
 
@@ -49,10 +95,39 @@ const fetchAddresses = async () => {
   }
 };
 
+
+  // Cargar órdenes del usuario
+  const fetchUserOrders = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoadingOrders(true);
+      const ordersData = await apiService.getUserOrders(user.id);
+      
+      if (ordersData.status === 'success') {
+        setOrders(ordersData.data.orders || []);
+      } else {
+        console.error('Error loading orders:', ordersData);
+        setOrders([]);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      setOrders([]);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+
 // Luego el useEffect solo la llama
 useEffect(() => {
-  if (user?.id) fetchAddresses();
-}, [user]);
+  if (user?.id) {
+    fetchAddresses();
+          if (activeSection === 'orders') {
+        fetchUserOrders();
+      }
+  }
+}, [user,activeSection]);
 
 useEffect(() => {
   if (location.state?.activeSection) {
@@ -615,6 +690,107 @@ if (formValues.isDefault) {
   });
 };
 
+ const viewOrderDetails = async (orderId) => {
+    try {
+      const orderDetails = await apiService.getOrderDetails(orderId);
+      
+      if (orderDetails.status === 'success') {
+        const order = orderDetails.data;
+        
+        // Crear HTML para mostrar los detalles
+        const productsHtml = order.detalles.map(detalle => `
+          <div style="display: flex; align-items: center; margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <img src="${detalle.producto_imagen || 'https://via.placeholder.com/60x60?text=Imagen'}" 
+                 alt="${detalle.producto_nombre}" 
+                 style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; margin-right: 15px;">
+            <div style="flex: 1;">
+              <div style="font-weight: 600; color: #fff; margin-bottom: 5px;">${detalle.producto_nombre}</div>
+              <div style="color: #ccc; font-size: 14px;">
+                Cantidad: ${detalle.cantidad} × $${detalle.precio_unitario}
+              </div>
+              <div style="color: #4ade80; font-weight: 600;">Subtotal: $${detalle.subtotal}</div>
+            </div>
+          </div>
+        `).join('');
+
+        Swal.fire({
+          title: `<h3 style="color: #fff; margin-bottom: 20px;">Detalles del Pedido #${order.id.substring(0, 8).toUpperCase()}</h3>`,
+          html: `
+            <div style="text-align: left; color: #fff;">
+              <div style="margin-bottom: 15px;">
+                <strong>Estado:</strong> 
+                <span style="padding: 4px 12px; border-radius: 20px; background: ${
+                  order.estado === 'Entregado' ? '#4ade80' : 
+                  order.estado === 'Pendiente' ? '#f59e0b' : 
+                  order.estado === 'Cancelado' ? '#ef4444' : '#6366f1'
+                }; margin-left: 10px; font-size: 12px; font-weight: 600;">
+                  ${order.estado}
+                </span>
+              </div>
+              <div style="margin-bottom: 15px;">
+                <strong>Método de pago:</strong> ${order.metodo_pago || 'No especificado'}
+              </div>
+              <div style="margin-bottom: 15px;">
+                <strong>Fecha:</strong> ${new Date(order.creado_en).toLocaleDateString('es-ES', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
+              <div style="margin-bottom: 20px;">
+                <strong>Total:</strong> <span style="color: #4ade80; font-size: 18px; font-weight: 700;">$${order.total}</span>
+              </div>
+              
+              <h4 style="color: #fff; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px;">Productos:</h4>
+              ${productsHtml}
+            </div>
+          `,
+          background: "#1E1E2F",
+          width: "600px",
+          confirmButtonColor: "#6366F1",
+          confirmButtonText: "Cerrar"
+        });
+      } else {
+        throw new Error(orderDetails.message || 'Error al cargar los detalles');
+      }
+    } catch (error) {
+      console.error('Error loading order details:', error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudieron cargar los detalles del pedido",
+        confirmButtonColor: "#6366F1",
+        background: "#1E1E2F",
+        color: "#FFF",
+      });
+    }
+  };
+
+
+  // Función para obtener el color del estado
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Entregado': return '#4ade80';
+      case 'Pendiente': return '#f59e0b';
+      case 'Cancelado': return '#ef4444';
+      case 'Enviado': return '#6366f1';
+      case 'Confirmado': return '#8b5cf6';
+      default: return '#6b7280';
+    }
+  };
+
+
+  // Función para formatear fecha
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
 
   //  Enviar actualización al backend Flask
   const handleSubmit = async (e) => {
@@ -841,6 +1017,10 @@ setIsLoading(false);
 };
 
 
+const followPedido = (orderId) => {
+  navigate(`/order-details/${orderId}`);
+};
+
   if (!user) return <p>Cargando perfil...</p>;
 
   return (
@@ -914,18 +1094,7 @@ setIsLoading(false);
                 <i className="fas fa-shopping-bag"></i> Mis Pedidos
               </a>
             </li>
-            <li>
-              <a
-                href="#"
-                className={activeSection === "favorites" ? "active" : ""}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveSection("favorites");
-                }}
-              >
-                <i className="fas fa-heart"></i> Mis Favoritos
-              </a>
-            </li>
+
             <li>
               <a
                 href="#"
@@ -1100,90 +1269,110 @@ setIsLoading(false);
 
 
           {/* SECCIÓN DE PEDIDOS RECIENTES */}
-          {activeSection === 'orders' && (
-            <div  id="orders-section" className="profile-section">
-              <h2 className="section-title">Pedidos Recientes</h2>
-              
-              <div className="order-card">
-                <div className="order-header">
-                  <div className="order-id">Pedido #FL-2023-0012</div>
-                  <div className="order-status status-delivered">Entregado</div>
-                </div>
-                <div className="order-details">
-                  <div className="order-image">
-                    <img src="https://images.unsplash.com/photo-1621072156002-e2fccdc0b176?auto=format&fit=crop&w=500&q=80" alt="Camisa Formal Azul"/>
-                  </div>
-                  <div className="order-info">
-                    <div className="order-product">Camisa Formal Azul Marino</div>
-                    <div className="order-date">Realizado el 15 de Noviembre, 2023</div>
-                    <div className="order-total">Total: $49.99</div>
-                  </div>
-                </div>
-                <div className="order-actions">
-                  <button className="btn btn-outline">Ver Detalles</button>
-                  <button className="btn btn-outline">Volver a Comprar</button>
-                </div>
-              </div>
-              
-              <div className="order-card">
-                <div className="order-header">
-                  <div className="order-id">Pedido #FL-2023-0011</div>
-                  <div className="order-status status-pending">En Proceso</div>
-                </div>
-                <div className="order-details">
-                  <div className="order-image">
-                    <img src="https://images.unsplash.com/photo-1593030103066-0093718efeb9?auto=format&fit=crop&w=500&q=80" alt="Camisa Casual a Cuadros"/>
-                  </div>
-                  <div className="order-info">
-                    <div className="order-product">Camisa Casual a Cuadros</div>
-                    <div className="order-date">Realizado el 10 de Noviembre, 2023</div>
-                    <div className="order-total">Total: $36.79</div>
-                  </div>
-                </div>
-                <div className="order-actions">
-                  <button className="btn btn-outline">Ver Detalles</button>
-                  <button className="btn btn-outline">Seguir Pedido</button>
-                </div>
-              </div>
-              
-              <button className="btn btn-outline" style={{width: '100%'}}>Ver Todos los Pedidos</button>
-            </div>
-          )}
 
           {/* SECCIÓN DE FAVORITOS */}
-          {activeSection === 'favorites' && (
-            <div className="profile-section">
-              <h2 className="section-title">Mis Favoritos</h2>
+          {activeSection === 'orders' && (
+            <div id="orders-section" className="profile-section">
+              <h2 className="section-title">Mis Pedidos</h2>
               
-              <div className="favorite-grid">
-                <div className="favorite-card">
-                  <div className="favorite-image">
-                    <img src="https://images.unsplash.com/photo-1525450824782-b60f5a1d654a?auto=format&fit=crop&w=500&q=80" alt="Camisa Oxford Gris"/>
-                  </div>
-                  <div className="favorite-info">
-                    <div className="favorite-name">Camisa Oxford Gris</div>
-                    <div className="favorite-price">$42.99</div>
-                    <div className="favorite-actions">
-                      <button className="btn btn-primary">Añadir al Carrito</button>
-                      <button className="btn btn-outline"><i className="fas fa-trash"></i></button>
-                    </div>
-                  </div>
+              {loadingOrders ? (
+                <div className="loading-orders">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <p>Cargando tus pedidos...</p>
                 </div>
-                
-                <div className="favorite-card">
-                  <div className="favorite-image">
-                    <img src="https://images.unsplash.com/photo-1574180045827-681f8a1a9622?auto=format&fit=crop&w=500&q=80" alt="Camisa Denim Azul"/>
-                  </div>
-                  <div className="favorite-info">
-                    <div className="favorite-name">Camisa Denim Azul</div>
-                    <div className="favorite-price">$34.99</div>
-                    <div className="favorite-actions">
-                      <button className="btn btn-primary">Añadir al Carrito</button>
-                      <button className="btn btn-outline"><i className="fas fa-trash"></i></button>
-                    </div>
-                  </div>
+              ) : orders.length === 0 ? (
+                <div className="no-orders">
+                  <i className="fas fa-shopping-bag"></i>
+                  <h3>No tienes pedidos aún</h3>
+                  <p>Cuando realices tu primera compra, aparecerá aquí.</p>
+                  <a href="/productos" className="btn btn-primary">
+                    Explorar Productos
+                  </a>
                 </div>
-              </div>
+              ) : (
+                <div className="orders-list">
+                  {orders.map((order) => (
+                    <div key={order.id} className="order-card">
+                      <div className="order-header">
+                        <div className="order-id">
+                          Pedido #{order.id.substring(0, 8).toUpperCase()}
+                        </div>
+                        <div 
+                          className="order-status"
+                          style={{ 
+                            backgroundColor: getStatusColor(order.estado),
+                            color: '#fff'
+                          }}
+                        >
+                          {order.estado}
+                        </div>
+                      </div>
+                      
+                      <div className="order-details">
+                        <div className="order-products-preview">
+                          {order.detalles.slice(0, 2).map((detalle, index) => (
+                            <div key={detalle.id} className="order-product-preview">
+                              <img 
+                                src={detalle.producto_imagen || 'https://via.placeholder.com/50x50?text=Imagen'} 
+                                alt={detalle.producto_nombre}
+                                onError={(e) => {
+                                  e.target.src = 'https://via.placeholder.com/50x50?text=Imagen';
+                                }}
+                              />
+                              {index === 0 && order.detalles.length > 2 && (
+                                <div className="more-products">+{order.detalles.length - 2} más</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="order-info">
+                          <div className="order-date">
+                            Realizado el {formatDate(order.creado_en)}
+                          </div>
+                          <div className="order-items">
+                            {order.detalles.length} producto{order.detalles.length !== 1 ? 's' : ''}
+                          </div>
+                          <div className="order-total">
+                            Total: ${order.total}
+                          </div>
+                        </div>
+                      </div>
+                      
+<div className="order-actions">
+  <button 
+    className="btn btn-outline"
+    onClick={() => viewOrderDetails(order.id)}
+  >
+    Ver Detalles
+  </button>
+  
+  {/* Mostrar "Seguir Pedido" para estados activos (no entregados ni cancelados) */}
+  {(order.estado === 'Pendiente' || 
+    order.estado === 'Confirmado' || 
+    order.estado === 'En preparación' || 
+    order.estado === 'Enviado' ||
+   order.estado === 'cancelado' ||
+  order.estado === 'Entregado')
+   && (
+    <button 
+      className="btn btn-outline"  
+      onClick={() => followPedido(order.id)}
+    >
+      Seguir Pedido
+    </button>
+  )}
+  
+  {order.estado === 'Entregado' && (
+    <button className="btn btn-outline">
+      Volver a Comprar
+    </button>
+  )}
+</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

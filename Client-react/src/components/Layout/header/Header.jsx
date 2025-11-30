@@ -20,12 +20,32 @@ const favoritesService = {
     }
   }
 };
+const cartsService = {
+  async getCartsCount(userId){
+        try {
+      const response = await fetch(`http://localhost:5000/cart/${userId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching favorites count:', error);
+      return { status: 'error', data: [] };
+    }
+  }
+}
+
+
+
+
 
 export const Header = () => {
   const [user, setUser] = useState(null);
   const [favoritesCount, setFavoritesCount] = useState(0);
-  const [cartCount, setCartCount] = useState(0);
+  const [cartsCount, setCartsCount] = useState(0);
   const [hasLoadedFavorites, setHasLoadedFavorites] = useState(false);
+  const [hasLoadedCarts, setHasLoadedCarts] = useState(false);
 
   // Función para normalizar los datos del usuario
   const normalizeUser = (raw) => {
@@ -50,16 +70,6 @@ export const Header = () => {
       setUser(userData);
     }
 
-    // Cargar carrito desde localStorage (SOLO UNA VEZ)
-    const cart = localStorage.getItem('cart');
-    if (cart) {
-      try {
-        const cartItems = JSON.parse(cart);
-        setCartCount(cartItems.length || 0);
-      } catch (error) {
-        console.error('Error parsing cart:', error);
-      }
-    }
   }, []); // ← Array de dependencias vacío para que solo se ejecute una vez
 
   // Cargar favoritos solo cuando el usuario esté disponible
@@ -69,33 +79,68 @@ export const Header = () => {
     }
   }, [user, hasLoadedFavorites]);
 
+    useEffect(() => {
+    if (user && user.id && !hasLoadedCarts) {
+      loadCartsCount(user.id);
+    }
+  }, [user, hasLoadedCarts]);
+
   // Función para cargar el contador de favoritos (SOLO UNA VEZ)
   const loadFavoritesCount = async (userId) => {
     try {
-      console.log('🔄 Loading favorites count for user:', userId);
+      console.log(' Loading favorites count for user:', userId);
       const favoritesData = await favoritesService.getFavoritesCount(userId);
       
       if (favoritesData.status === 'success') {
         const count = favoritesData.data.length;
-        console.log('✅ Favorites count:', count);
+        console.log(' Favorites count:', count);
         setFavoritesCount(count);
         setHasLoadedFavorites(true); // Marcar como cargado
       } else {
-        console.error('❌ Error loading favorites count:', favoritesData);
+        console.error(' Error loading favorites count:', favoritesData);
         setFavoritesCount(0);
         setHasLoadedFavorites(true);
       }
     } catch (error) {
-      console.error('❌ Error loading favorites count:', error);
+      console.error(' Error loading favorites count:', error);
       setFavoritesCount(0);
       setHasLoadedFavorites(true);
     }
   };
 
+const loadCartsCount = async (userId) => {
+    try {
+      console.log(' Loading cart count for user:', userId);
+      const cartsData = await cartsService.getCartsCount(userId);
+      
+      console.log(' Raw cart data:', cartsData); // Para debug
+      
+      if (cartsData.status === 'success') {
+        // USAR total_items QUE YA VIENE CALCULADO DESDE LA API
+        const count = cartsData.data.total_items || 0;
+        console.log(' Cart count:', count);
+        setCartsCount(count);
+        setHasLoadedCarts(true);
+      } else {
+        console.error(' Error loading cart count:', cartsData);
+        setCartsCount(0);
+        setHasLoadedCarts(true);
+      }
+    } catch (error) {
+      console.error(' Error loading cart count:', error);
+      setCartsCount(0);
+      setHasLoadedCarts(true);
+    }
+  };
   // Función para forzar actualización manual (opcional, para usar desde otros componentes)
   const refreshFavoritesCount = () => {
     if (user && user.id) {
       setHasLoadedFavorites(false); // Permitir recarga
+    }
+  };
+  const refreshCartsCount = () => {
+    if (user && user.id) {
+      setHasLoadedCarts(false); // Permitir recarga
     }
   };
 
@@ -105,6 +150,7 @@ export const Header = () => {
     setFavoritesCount(0);
     setCartCount(0);
     setHasLoadedFavorites(false);
+    setHasLoadedCarts(false);
     window.location.href = '/login';
   };
 
@@ -157,9 +203,9 @@ export const Header = () => {
           <div className="icon-with-badge" title="Carrito de compras">
             <Link to={"/Carrito"}>
               <i className="fas fa-shopping-cart"></i>
-              {cartCount > 0 && (
+              {cartsCount > 0 && (
                 <span className="badge" id="cart-count">
-                  {cartCount > 99 ? '99+' : cartCount}
+                  {cartsCount > 99 ? '99+' : cartsCount}
                 </span>
               )}
             </Link>
@@ -194,6 +240,9 @@ export const refreshHeaderCounts = () => {
   // Esta función puede ser llamada desde otros componentes cuando sea necesario
   window.dispatchEvent(new CustomEvent('refreshHeader'));
 };
+
+
+
 export const Mi_Cuenta = () => {
   return (
     <section className="profile-hero">
