@@ -32,7 +32,7 @@ const apiService = {
   // SERVICIO DE FAVORITOS
   async getFavorites(userId) {
     try {
-      console.log('🔄 Getting favorites for user:', userId);
+      console.log(' Getting favorites for user:', userId);
       const response = await fetch(`http://localhost:5000/favorites/${userId}`);
       
       if (!response.ok) {
@@ -40,17 +40,17 @@ const apiService = {
       }
       
       const data = await response.json();
-      console.log('✅ Favorites response:', data);
+      console.log(' Favorites response:', data);
       return data;
     } catch (error) {
-      console.error('❌ Error fetching favorites:', error);
+      console.error(' Error fetching favorites:', error);
       throw error;
     }
   },
 
   async addToFavorites(userId, productId) {
     try {
-      console.log('🔄 Adding to favorites:', { userId, productId });
+      console.log(' Adding to favorites:', { userId, productId });
       
       const response = await fetch('http://localhost:5000/favorites/add', {
         method: 'POST',
@@ -63,26 +63,26 @@ const apiService = {
         })
       });
       
-      console.log('📥 Response status:', response.status);
+      console.log(' Response status:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Server response error:', errorText);
+        console.error(' Server response error:', errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log('✅ Add favorite response:', data);
+      console.log(' Add favorite response:', data);
       return data;
     } catch (error) {
-      console.error('❌ Error adding to favorites:', error);
+      console.error(' Error adding to favorites:', error);
       throw error;
     }
   },
 
   async removeFromFavorites(userId, productId) {
     try {
-      console.log('🔄 Removing from favorites:', { userId, productId });
+      console.log(' Removing from favorites:', { userId, productId });
       
       const response = await fetch('http://localhost:5000/favorites/remove', {
         method: 'DELETE',
@@ -95,17 +95,17 @@ const apiService = {
         })
       });
       
-      console.log('📥 Remove response status:', response.status);
+      console.log(' Remove response status:', response.status);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log('✅ Remove favorite response:', data);
+      console.log('Remove favorite response:', data);
       return data;
     } catch (error) {
-      console.error('❌ Error removing from favorites:', error);
+      console.error(' Error removing from favorites:', error);
       throw error;
     }
   },
@@ -161,22 +161,22 @@ export default function PantalonHombres() {
     { id: 'cargo', name: 'Cargo', count: 0 }
   ];
 
-  // Obtener el usuario del localStorage - MOVIDO ARRIBA DEL useEffect PRINCIPAL
+  // Obtener el usuario del localStorage 
   useEffect(() => {
     const getCurrentUser = () => {
       const userData = localStorage.getItem('user');
-      console.log('🔍 User data from localStorage:', userData);
+      console.log(' User data from localStorage:', userData);
       
       if (userData) {
         try {
           const user = JSON.parse(userData);
-          console.log('✅ User parsed:', user);
+          console.log(' User parsed:', user);
           setCurrentUserId(user.id); // ← ID real de la base de datos
         } catch (error) {
-          console.error('❌ Error parsing user data:', error);
+          console.error(' Error parsing user data:', error);
         }
       } else {
-        console.warn('⚠️ No hay usuario logueado en localStorage');
+        console.warn('No hay usuario logueado en localStorage');
       }
     };
     
@@ -185,37 +185,37 @@ export default function PantalonHombres() {
 
   // useEffect principal - AHORA DEPENDE DE currentUserId
   useEffect(() => {
-    console.log('🎯 Main useEffect running, currentUserId:', currentUserId);
+    console.log(' Main useEffect running, currentUserId:', currentUserId);
     setCategories(initialPantalonesCategories);
     loadDataFromAPI();
     
     if (currentUserId) {
-      console.log('👤 Loading favorites for user:', currentUserId);
+      console.log(' Loading favorites for user:', currentUserId);
       loadUserFavorites();
     } else {
-      console.log('⏳ Waiting for user ID to load favorites...');
+      console.log(' Waiting for user ID to load favorites...');
     }
   }, [currentUserId]); // ← Agregar currentUserId como dependencia
 
   // Cargar favoritos del usuario - ACTUALIZADA
   const loadUserFavorites = async () => {
     if (!currentUserId) {
-      console.warn('⏹️ Cannot load favorites: no user ID');
+      console.warn(' Cannot load favorites: no user ID');
       return;
     }
 
     try {
-      console.log('🔄 Loading favorites for user:', currentUserId);
+      console.log(' Loading favorites for user:', currentUserId);
       const favoritesData = await apiService.getFavorites(currentUserId);
       if (favoritesData.status === 'success') {
         const favoriteIds = favoritesData.data.map(fav => fav.producto.id);
-        console.log('✅ Favorites loaded:', favoriteIds);
+        console.log(' Favorites loaded:', favoriteIds);
         setFavorites(favoriteIds);
       } else {
-        console.error('❌ Error in favorites response:', favoritesData);
+        console.error(' Error in favorites response:', favoritesData);
       }
     } catch (error) {
-      console.error('❌ Error loading favorites:', error);
+      console.error(' Error loading favorites:', error);
     }
   };
 
@@ -224,7 +224,7 @@ export default function PantalonHombres() {
     return favorites.includes(productId);
   };
 
-  // Manejar toggle de favoritos - MEJORADA CON VERIFICACIÓN DE USUARIO
+  // Manejar toggle de favoritos
   const handleToggleFavorite = async (productId) => {
     // Verificar que el usuario esté logueado
     if (!currentUserId) {
@@ -240,7 +240,7 @@ export default function PantalonHombres() {
 
     try {
       const isCurrentlyFavorite = isProductFavorite(productId);
-      console.log('🎯 Toggle favorite - Product:', productId, 'User:', currentUserId, 'Currently favorite:', isCurrentlyFavorite);
+      console.log(' Toggle favorite - Product:', productId, 'User:', currentUserId, 'Currently favorite:', isCurrentlyFavorite);
       
       if (isCurrentlyFavorite) {
         // Remover de favoritos
@@ -274,7 +274,7 @@ export default function PantalonHombres() {
         }
       }
     } catch (error) {
-      console.error('❌ Error toggling favorite:', error);
+      console.error(' Error toggling favorite:', error);
       Swal.fire({
         title: 'Error',
         text: error.message || 'No se pudo actualizar tus favoritos',

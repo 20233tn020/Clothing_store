@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, session
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS, cross_origin
 from flask_mail import Mail, Message
-from models import db, User, Admin,Address,Product,Category,Favorite
+from models import db, User, Admin,Address,Product,Category,Favorite,Cart,CartItem,Order,OrderDetail
 from sqlalchemy.exc import SQLAlchemyError
 import mysql.connector
 from mysql.connector import Error
@@ -1120,6 +1120,944 @@ def count_user_favorites(user_id):
 
 
 
+
+
+# =====================================
+# AGREGAR PRODUCTO AL CARRITO
+# =====================================
+@app.route("/cart/add", methods=["POST"])
+def add_to_cart():
+    try:
+        data = request.get_json()
+        
+        # Validar datos requeridos
+        if not data or 'user_id' not in data or 'product_id' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "Se requieren user_id y product_id"
+            }), 400
+        
+        user_id = data['user_id']
+        product_id = data['product_id']
+        cantidad = data.get('cantidad', 1)  # Default 1 si no se especifica
+        
+        # Verificar si el usuario existe
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "Usuario no encontrado"
+            }), 404
+        
+        # Verificar si el producto existe y está activo
+        product = Product.query.get(product_id)
+        if not product:
+            return jsonify({
+                "status": "error",
+                "message": "Producto no encontrado"
+            }), 404
+        
+        if not product.activo:
+            return jsonify({
+                "status": "error",
+                "message": "El producto no está disponible"
+            }), 400
+        
+        # Verificar stock disponible
+        if product.stock < cantidad:
+            return jsonify({
+                "status": "error",
+                "message": f"Stock insuficiente. Solo quedan {product.stock} unidades"
+            }), 400
+        
+        # Buscar o crear carrito para el usuario
+        cart = Cart.query.filter_by(user_id=user_id).first()
+        if not cart:
+            cart = Cart(user_id=user_id)
+            db.session.add(cart)
+            db.session.commit()
+        
+        # Verificar si el producto ya está en el carrito
+        cart_item = CartItem.query.filter_by(
+            cart_id=cart.id, 
+            product_id=product_id
+        ).first()
+        
+        if cart_item:
+            # Actualizar cantidad si ya existe
+            nueva_cantidad = cart_item.cantidad + cantidad
+            
+            # Verificar stock nuevamente
+            if product.stock < nueva_cantidad:
+                return jsonify({
+                    "status": "error",
+                    "message": f"Stock insuficiente. Máximo disponible: {product.stock} unidades"
+                }), 400
+            
+            cart_item.cantidad = nueva_cantidad
+            cart_item.subtotal = nueva_cantidad * product.precio
+        else:
+            # Crear nuevo item en el carrito
+            subtotal = cantidad * product.precio
+            cart_item = CartItem(
+                cart_id=cart.id,
+                product_id=product_id,
+                cantidad=cantidad,
+                subtotal=subtotal
+            )
+            db.session.add(cart_item)
+        
+        # Actualizar timestamp del carrito
+        cart.actualizado_en = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Producto agregado al carrito",
+            "data": {
+                "cart_id": cart.id,
+                "item_id": cart_item.id,
+                "product_id": product_id,
+                "cantidad": cart_item.cantidad,
+                "precio_unitario": float(product.precio),
+                "subtotal": float(cart_item.subtotal),
+                "producto": {
+                    "nombre": product.nombre,
+                    "imagen_url": product.imagen_url
+                }
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": f"Error al agregar al carrito: {str(e)}"
+        }), 500
+
+# =====================================
+# OBTENER CARRITO DE USUARIO
+# =====================================
+@app.route("/cart/<user_id>", methods=["GET"])
+def get_cart(user_id):
+    try:
+        # Verificar si el usuario existe
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "Usuario no encontrado"
+            }), 404
+
+        # Buscar carrito del usuario
+        cart = Cart.query.filter_by(user_id=user_id).first()
+        
+        if not cart:
+            return jsonify({
+                "status": "success",
+                "data": {
+                    "cart_id": None,
+                    "items": [],
+                    "total_items": 0,
+                    "total_precio": 0.0,
+                    "usuario": {
+                        "user_id": user_id,
+                        "nombre": f"{user.Nombre} {user.Apellido}"
+                    }
+                }
+            }), 200
+        
+        # Obtener items del carrito con información completa
+        cart_items = []
+        total_precio = 0.0
+        total_items = 0
+        
+        for item in cart.items:
+            product = Product.query.get(item.product_id)
+            if product and product.activo:  # Solo productos activos
+                item_data = {
+                    "item_id": item.id,
+                    "product_id": product.id,
+                    "nombre": product.nombre,
+                    "descripcion": product.descripcion,
+                    "precio_unitario": float(product.precio),
+                    "cantidad": item.cantidad,
+                    "subtotal": float(item.subtotal),
+                    "imagen_url": product.imagen_url,
+                    "stock_disponible": product.stock,
+                    "categoria": product.categoria.nombre if product.categoria else None
+                }
+                cart_items.append(item_data)
+                total_precio += item.subtotal
+                total_items += item.cantidad
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "cart_id": cart.id,
+                "items": cart_items,
+                "total_items": total_items,
+                "total_precio": float(total_precio),
+                "usuario": {
+                    "user_id": user_id,
+                    "nombre": f"{user.Nombre} {user.Apellido}",
+                    "email": user.Email
+                },
+                "fechas": {
+                    "creado_en": cart.creado_en.isoformat() if cart.creado_en else None,
+                    "actualizado_en": cart.actualizado_en.isoformat() if cart.actualizado_en else None
+                }
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Error al obtener carrito: {str(e)}"
+        }), 500
+
+# =====================================
+# ACTUALIZAR CANTIDAD EN CARRITO
+# =====================================
+@app.route("/cart/update", methods=["PUT"])
+def update_cart_item():
+    try:
+        data = request.get_json()
+        
+        # Validar datos requeridos
+        if not data or 'item_id' not in data or 'cantidad' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "Se requieren item_id y cantidad"
+            }), 400
+        
+        item_id = data['item_id']
+        nueva_cantidad = data['cantidad']
+        
+        # Validar cantidad
+        if nueva_cantidad < 0:
+            return jsonify({
+                "status": "error",
+                "message": "La cantidad no puede ser negativa"
+            }), 400
+        
+        if nueva_cantidad == 0:
+            # Si cantidad es 0, eliminar el item
+            return remove_from_cart()
+        
+        # Buscar el item del carrito
+        cart_item = CartItem.query.get(item_id)
+        if not cart_item:
+            return jsonify({
+                "status": "error",
+                "message": "Item del carrito no encontrado"
+            }), 404
+        
+        # Verificar producto y stock
+        product = Product.query.get(cart_item.product_id)
+        if not product:
+            return jsonify({
+                "status": "error",
+                "message": "Producto no encontrado"
+            }), 404
+        
+        if not product.activo:
+            return jsonify({
+                "status": "error",
+                "message": "El producto ya no está disponible"
+            }), 400
+        
+        if product.stock < nueva_cantidad:
+            return jsonify({
+                "status": "error",
+                "message": f"Stock insuficiente. Solo quedan {product.stock} unidades"
+            }), 400
+        
+        # Actualizar cantidad y subtotal
+        cart_item.cantidad = nueva_cantidad
+        cart_item.subtotal = nueva_cantidad * product.precio
+        
+        # Actualizar timestamp del carrito
+        cart = Cart.query.get(cart_item.cart_id)
+        if cart:
+            cart.actualizado_en = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Carrito actualizado",
+            "data": {
+                "item_id": cart_item.id,
+                "product_id": cart_item.product_id,
+                "cantidad": cart_item.cantidad,
+                "precio_unitario": float(product.precio),
+                "subtotal": float(cart_item.subtotal),
+                "producto": {
+                    "nombre": product.nombre,
+                    "stock_disponible": product.stock
+                }
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": f"Error al actualizar carrito: {str(e)}"
+        }), 500
+
+# =====================================
+# ELIMINAR PRODUCTO DEL CARRITO
+# =====================================
+@app.route("/cart/remove", methods=["DELETE"])
+def remove_from_cart():
+    try:
+        data = request.get_json()
+        
+        # Validar datos requeridos
+        if not data or 'item_id' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "Se requiere item_id"
+            }), 400
+        
+        item_id = data['item_id']
+        
+        # Buscar el item del carrito
+        cart_item = CartItem.query.get(item_id)
+        if not cart_item:
+            return jsonify({
+                "status": "error",
+                "message": "Item del carrito no encontrado"
+            }), 404
+        
+        # Guardar info para la respuesta
+        product_info = {
+            "product_id": cart_item.product_id,
+            "item_id": cart_item.id
+        }
+        
+        # Eliminar el item
+        db.session.delete(cart_item)
+        
+        # Actualizar timestamp del carrito
+        cart = Cart.query.get(cart_item.cart_id)
+        if cart:
+            cart.actualizado_en = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Producto eliminado del carrito",
+            "data": product_info
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": f"Error al eliminar del carrito: {str(e)}"
+        }), 500
+
+# =====================================
+# VACIAR CARRITO COMPLETO
+# =====================================
+@app.route("/cart/<user_id>/clear", methods=["DELETE"])
+def clear_cart(user_id):
+    try:
+        # Verificar si el usuario existe
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "Usuario no encontrado"
+            }), 404
+        
+        # Buscar carrito del usuario
+        cart = Cart.query.filter_by(user_id=user_id).first()
+        
+        if not cart or not cart.items:
+            return jsonify({
+                "status": "success",
+                "message": "El carrito ya está vacío",
+                "data": {
+                    "user_id": user_id,
+                    "items_eliminados": 0
+                }
+            }), 200
+        
+        # Contar items a eliminar
+        items_count = len(cart.items)
+        
+        # Eliminar todos los items
+        for item in cart.items:
+            db.session.delete(item)
+        
+        # Actualizar timestamp del carrito
+        cart.actualizado_en = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Carrito vaciado correctamente",
+            "data": {
+                "user_id": user_id,
+                "items_eliminados": items_count,
+                "cart_id": cart.id
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": f"Error al vaciar carrito: {str(e)}"
+        }), 500
+
+# =====================================
+# CONTAR ITEMS EN CARRITO
+# =====================================
+@app.route("/cart/<user_id>/count", methods=["GET"])
+def count_cart_items(user_id):
+    try:
+        # Verificar si el usuario existe
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "Usuario no encontrado"
+            }), 404
+        
+        # Buscar carrito del usuario
+        cart = Cart.query.filter_by(user_id=user_id).first()
+        
+        total_items = 0
+        total_precio = 0.0
+        
+        if cart and cart.items:
+            for item in cart.items:
+                total_items += item.cantidad
+                total_precio += item.subtotal
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "user_id": user_id,
+                "total_items": total_items,
+                "total_precio": float(total_precio),
+                "usuario": {
+                    "nombre": f"{user.Nombre} {user.Apellido}",
+                    "email": user.Email
+                }
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Error al contar items del carrito: {str(e)}"
+        }), 500
+
+# =====================================
+# VERIFICAR STOCK DE ITEMS EN CARRITO
+# =====================================
+@app.route("/cart/<user_id>/check-stock", methods=["GET"])
+def check_cart_stock(user_id):
+    try:
+        # Verificar si el usuario existe
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "Usuario no encontrado"
+            }), 404
+        
+        # Buscar carrito del usuario
+        cart = Cart.query.filter_by(user_id=user_id).first()
+        
+        if not cart or not cart.items:
+            return jsonify({
+                "status": "success",
+                "message": "El carrito está vacío",
+                "data": {
+                    "user_id": user_id,
+                    "stock_ok": True,
+                    "items_sin_stock": []
+                }
+            }), 200
+        
+        # Verificar stock de cada item
+        items_sin_stock = []
+        
+        for item in cart.items:
+            product = Product.query.get(item.product_id)
+            if product:
+                stock_info = {
+                    "item_id": item.id,
+                    "product_id": product.id,
+                    "nombre": product.nombre,
+                    "cantidad_en_carrito": item.cantidad,
+                    "stock_disponible": product.stock,
+                    "suficiente": product.stock >= item.cantidad
+                }
+                
+                if not stock_info["suficiente"]:
+                    items_sin_stock.append(stock_info)
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "user_id": user_id,
+                "stock_ok": len(items_sin_stock) == 0,
+                "total_items_revisados": len(cart.items),
+                "items_sin_stock": items_sin_stock,
+                "resumen": {
+                    "con_stock": len(cart.items) - len(items_sin_stock),
+                    "sin_stock": len(items_sin_stock)
+                }
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Error al verificar stock: {str(e)}"
+        }), 500
+
+
+
+# =====================================
+# CREAR NUEVA ORDEN
+# =====================================
+@app.route("/orders", methods=["POST"])
+def create_order():
+    try:
+        data = request.get_json()
+        
+        # Validar datos requeridos
+        if not data or 'user_id' not in data or 'total' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "Se requieren user_id y total"
+            }), 400
+        
+        user_id = data['user_id']
+        total = data['total']
+        metodo_pago = data.get('metodo_pago', 'credit_card')
+        estado = data.get('estado', 'Pendiente')
+        detalles = data.get('detalles', [])
+        
+        # Verificar si el usuario existe
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "Usuario no encontrado"
+            }), 404
+        
+        # Verificar que hay detalles de orden
+        if not detalles:
+            return jsonify({
+                "status": "error",
+                "message": "La orden debe contener productos"
+            }), 400
+        
+        # Crear nueva orden
+        nueva_orden = Order(
+            user_id=user_id,
+            total=total,
+            estado=estado,
+            metodo_pago=metodo_pago
+        )
+        
+        db.session.add(nueva_orden)
+        db.session.flush()  # Para obtener el ID sin hacer commit
+        
+        # Crear detalles de la orden
+        for detalle in detalles:
+            # Verificar que el producto existe
+            producto = Product.query.get(detalle['product_id'])
+            if not producto:
+                return jsonify({
+                    "status": "error",
+                    "message": f"Producto con ID {detalle['product_id']} no encontrado"
+                }), 404
+            
+            # Verificar stock
+            if producto.stock < detalle['cantidad']:
+                return jsonify({
+                    "status": "error",
+                    "message": f"Stock insuficiente para {producto.nombre}. Stock disponible: {producto.stock}"
+                }), 400
+            
+            # Crear detalle de orden
+            nuevo_detalle = OrderDetail(
+                order_id=nueva_orden.id,
+                product_id=detalle['product_id'],
+                cantidad=detalle['cantidad'],
+                precio_unitario=detalle['precio_unitario'],
+                subtotal=detalle['subtotal']
+            )
+            
+            db.session.add(nuevo_detalle)
+            
+            # Actualizar stock del producto
+            producto.stock -= detalle['cantidad']
+            producto.actualizado_en = datetime.utcnow()
+        
+        # Confirmar todos los cambios
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Orden creada exitosamente",
+            "data": {
+                "order_id": nueva_orden.id,
+                "user_id": user_id,
+                "total": total,
+                "estado": estado,
+                "metodo_pago": metodo_pago,
+                "creado_en": nueva_orden.creado_en.isoformat(),
+                "detalles_count": len(detalles)
+            }
+        }), 201
+        
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": "Error en la base de datos",
+            "details": str(e)
+        }), 500
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": "Error interno del servidor",
+            "details": str(e)
+        }), 500
+
+# =====================================
+# OBTENER ÓRDENES DE UN USUARIO
+# =====================================
+@app.route("/orders/user/<string:user_id>", methods=["GET"])
+def get_user_orders(user_id):
+    try:
+        # Verificar si el usuario existe
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "Usuario no encontrado"
+            }), 404
+        
+        # Obtener órdenes del usuario
+        orders = Order.query.filter_by(user_id=user_id).order_by(Order.creado_en.desc()).all()
+        
+        orders_list = []
+        for order in orders:
+            order_data = {
+                "id": order.id,
+                "total": float(order.total),
+                "estado": order.estado,
+                "metodo_pago": order.metodo_pago,
+                "creado_en": order.creado_en.isoformat() if order.creado_en else None,
+                "detalles": []
+            }
+            
+            # Agregar detalles de la orden
+            for detalle in order.detalles:
+                producto = Product.query.get(detalle.product_id)
+                order_data["detalles"].append({
+                    "id": detalle.id,
+                    "product_id": detalle.product_id,
+                    "producto_nombre": producto.nombre if producto else "Producto no disponible",
+                    "producto_imagen": producto.imagen_url if producto else None,
+                    "cantidad": detalle.cantidad,
+                    "precio_unitario": float(detalle.precio_unitario),
+                    "subtotal": float(detalle.subtotal)
+                })
+            
+            orders_list.append(order_data)
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "user": {
+                    "id": user.id,
+                    "nombre": f"{user.Nombre} {user.Apellido}",
+                    "email": user.Email
+                },
+                "orders": orders_list,
+                "total_orders": len(orders_list)
+            }
+        }), 200
+        
+    except SQLAlchemyError as e:
+        return jsonify({
+            "status": "error",
+            "message": "Error en la base de datos",
+            "details": str(e)
+        }), 500
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": "Error interno del servidor",
+            "details": str(e)
+        }), 500
+
+# =====================================
+# OBTENER DETALLES DE UNA ORDEN ESPECÍFICA
+# =====================================
+@app.route("/orders/<string:order_id>", methods=["GET"])
+def get_order_details(order_id):
+    try:
+        # Obtener la orden
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({
+                "status": "error",
+                "message": "Orden no encontrada"
+            }), 404
+        
+        # Obtener información del usuario
+        user = User.query.get(order.user_id)
+        
+        order_data = {
+            "id": order.id,
+            "user_info": {
+                "id": user.id,
+                "nombre": f"{user.Nombre} {user.Apellido}",
+                "email": user.Email,
+                "telefono": user.Telefono
+            },
+            "total": float(order.total),
+            "estado": order.estado,
+            "metodo_pago": order.metodo_pago,
+            "creado_en": order.creado_en.isoformat() if order.creado_en else None,
+            "detalles": []
+        }
+        
+        # Agregar detalles de la orden
+        for detalle in order.detalles:
+            producto = Product.query.get(detalle.product_id)
+            order_data["detalles"].append({
+                "id": detalle.id,
+                "product_id": detalle.product_id,
+                "producto_nombre": producto.nombre if producto else "Producto no disponible",
+                "producto_descripcion": producto.descripcion if producto else None,
+                "producto_imagen": producto.imagen_url if producto else None,
+                "cantidad": detalle.cantidad,
+                "precio_unitario": float(detalle.precio_unitario),
+                "subtotal": float(detalle.subtotal)
+            })
+        
+        return jsonify({
+            "status": "success",
+            "data": order_data
+        }), 200
+        
+    except SQLAlchemyError as e:
+        return jsonify({
+            "status": "error",
+            "message": "Error en la base de datos",
+            "details": str(e)
+        }), 500
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": "Error interno del servidor",
+            "details": str(e)
+        }), 500
+
+# =====================================
+# ACTUALIZAR ESTADO DE UNA ORDEN
+# =====================================
+@app.route("/orders/<string:order_id>/status", methods=["PUT"])
+def update_order_status(order_id):
+    try:
+        data = request.get_json()
+        
+        if not data or 'estado' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "Se requiere el campo 'estado'"
+            }), 400
+        
+        nuevo_estado = data['estado']
+        
+        # Estados válidos
+        estados_validos = ['Pendiente', 'Confirmado', 'En preparación', 'Enviado', 'Entregado', 'Cancelado']
+        
+        if nuevo_estado not in estados_validos:
+            return jsonify({
+                "status": "error",
+                "message": f"Estado no válido. Estados permitidos: {', '.join(estados_validos)}"
+            }), 400
+        
+        # Obtener y actualizar la orden
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({
+                "status": "error",
+                "message": "Orden no encontrada"
+            }), 404
+        
+        order.estado = nuevo_estado
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Estado de la orden actualizado a: {nuevo_estado}",
+            "data": {
+                "order_id": order.id,
+                "nuevo_estado": nuevo_estado
+            }
+        }), 200
+        
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": "Error en la base de datos",
+            "details": str(e)
+        }), 500
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": "Error interno del servidor",
+            "details": str(e)
+        }), 500
+
+# =====================================
+# CANCELAR ORDEN
+# =====================================
+@app.route("/orders/<string:order_id>/cancel", methods=["PUT"])
+def cancel_order(order_id):
+    try:
+        # Obtener la orden
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({
+                "status": "error",
+                "message": "Orden no encontrada"
+            }), 404
+        
+        # Verificar si la orden puede ser cancelada
+        if order.estado in ['Entregado', 'Cancelado']:
+            return jsonify({
+                "status": "error",
+                "message": f"No se puede cancelar una orden en estado: {order.estado}"
+            }), 400
+        
+        # Devolver productos al stock
+        for detalle in order.detalles:
+            producto = Product.query.get(detalle.product_id)
+            if producto:
+                producto.stock += detalle.cantidad
+                producto.actualizado_en = datetime.utcnow()
+        
+        # Actualizar estado de la orden
+        order.estado = 'Cancelado'
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Orden cancelada exitosamente",
+            "data": {
+                "order_id": order.id,
+                "estado": "Cancelado"
+            }
+        }), 200
+        
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": "Error en la base de datos",
+            "details": str(e)
+        }), 500
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": "Error interno del servidor",
+            "details": str(e)
+        }), 500
+
+# =====================================
+# OBTENER TODAS LAS ÓRDENES (PARA ADMIN)
+# =====================================
+@app.route("/orders", methods=["GET"])
+def get_all_orders():
+    try:
+        # Parámetros de paginación
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        estado = request.args.get('estado', None)
+        
+        # Consulta base
+        query = Order.query
+        
+        # Filtrar por estado si se proporciona
+        if estado:
+            query = query.filter_by(estado=estado)
+        
+        # Ordenar por fecha de creación (más recientes primero)
+        query = query.order_by(Order.creado_en.desc())
+        
+        # Paginación
+        pagination = query.paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
+        
+        orders_list = []
+        for order in pagination.items:
+            user = User.query.get(order.user_id)
+            orders_list.append({
+                "id": order.id,
+                "user_info": {
+                    "id": user.id,
+                    "nombre": f"{user.Nombre} {user.Apellido}",
+                    "email": user.Email
+                },
+                "total": float(order.total),
+                "estado": order.estado,
+                "metodo_pago": order.metodo_pago,
+                "creado_en": order.creado_en.isoformat() if order.creado_en else None,
+                "detalles_count": len(order.detalles)
+            })
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "orders": orders_list,
+                "pagination": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total": pagination.total,
+                    "pages": pagination.pages
+                }
+            }
+        }), 200
+        
+    except SQLAlchemyError as e:
+        return jsonify({
+            "status": "error",
+            "message": "Error en la base de datos",
+            "details": str(e)
+        }), 500
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": "Error interno del servidor",
+            "details": str(e)
+        }), 500
 
 # =====================================
 # EJECUCIÓN

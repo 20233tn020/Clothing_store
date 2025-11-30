@@ -99,6 +99,104 @@ const apiService = {
       console.error('Error checking favorite:', error);
       throw error;
     }
+  },
+
+  // SERVICIO DEL CARRITO
+  async getCart(userId) {
+    try {
+      const response = await fetch(`http://localhost:5000/cart/${userId}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      throw error;
+    }
+  },
+
+
+  
+  async addToCart(userId, productId, cantidad = 1) {
+    try {
+      const response = await fetch('http://localhost:5000/cart/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          product_id: productId,
+          cantidad: cantidad
+        })
+      });
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      throw error;
+    }
+  },
+
+  async updateCartItem(itemId, cantidad) {
+    try {
+      const response = await fetch('http://localhost:5000/cart/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          item_id: itemId,
+          cantidad: cantidad
+        })
+      });
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error updating cart:', error);
+      throw error;
+    }
+  },
+
+  async removeFromCart(itemId) {
+    try {
+      const response = await fetch('http://localhost:5000/cart/remove', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          item_id: itemId
+        })
+      });
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error removing from cart:', error);
+      throw error;
+    }
+  },
+
+  async clearCart(userId) {
+    try {
+      const response = await fetch(`http://localhost:5000/cart/${userId}/clear`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+      throw error;
+    }
+  },
+
+  async getCartCount(userId) {
+    try {
+      const response = await fetch(`http://localhost:5000/cart/${userId}/count`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error getting cart count:', error);
+      throw error;
+    }
   }
 };
 
@@ -115,6 +213,12 @@ export default function ArtHombre() {
   // ESTADOS PARA FAVORITOS
   const [favorites, setFavorites] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
+
+  // ESTADOS PARA EL CARRITO
+  const [cart, setCart] = useState(null);
+  const [cartItems, setCartItems] = useState([]);
+  const [cartTotal, setCartTotal] = useState(0);
+  const [cartCount, setCartCount] = useState(0);
 
   // Categorías específicas para camisas - como estado
   const initialCamisasCategories = [
@@ -155,10 +259,11 @@ export default function ArtHombre() {
     loadDataFromAPI();
     
     if (currentUserId) {
-      console.log('👤 Loading favorites for user:', currentUserId);
+      console.log('👤 Loading favorites and cart for user:', currentUserId);
       loadUserFavorites();
+      loadUserCart();
     } else {
-      console.log('⏳ Waiting for user ID to load favorites...');
+      console.log('⏳ Waiting for user ID to load favorites and cart...');
     }
   }, [currentUserId]);
 
@@ -181,6 +286,31 @@ export default function ArtHombre() {
       }
     } catch (error) {
       console.error('❌ Error loading favorites:', error);
+    }
+  };
+
+  // Cargar carrito del usuario
+  const loadUserCart = async () => {
+    if (!currentUserId) {
+      console.warn('⏹️ Cannot load cart: no user ID');
+      return;
+    }
+
+    try {
+      console.log('🛒 Loading cart for user:', currentUserId);
+      const cartData = await apiService.getCart(currentUserId);
+      
+      if (cartData.status === 'success') {
+        console.log('✅ Cart loaded:', cartData.data);
+        setCart(cartData.data);
+        setCartItems(cartData.data.items || []);
+        setCartTotal(cartData.data.total_precio || 0);
+        setCartCount(cartData.data.total_items || 0);
+      } else {
+        console.error('❌ Error in cart response:', cartData);
+      }
+    } catch (error) {
+      console.error('❌ Error loading cart:', error);
     }
   };
 
@@ -243,6 +373,140 @@ export default function ArtHombre() {
       Swal.fire({
         title: 'Error',
         text: error.message || 'No se pudo actualizar tus favoritos',
+        icon: 'error',
+        timer: 2000
+      });
+    }
+  };
+
+  // Manejar agregar al carrito
+  const handleAddToCart = async (productId) => {
+    // Verificar que el usuario esté logueado
+    if (!currentUserId) {
+      Swal.fire({
+        title: 'Inicia sesión',
+        text: 'Debes iniciar sesión para agregar productos al carrito',
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        timer: 3000
+      });
+      return;
+    }
+
+    try {
+      const product = products.find(p => p.id === productId);
+      if (!product) {
+        throw new Error('Producto no encontrado');
+      }
+
+      // Verificar stock
+      if (product.stock === 0) {
+        Swal.fire({
+          title: 'Producto Agotado',
+          text: 'Lo sentimos, este producto no está disponible en este momento',
+          icon: 'warning',
+          timer: 2000
+        });
+        return;
+      }
+
+      console.log('🛒 Adding to cart - Product:', productId, 'User:', currentUserId);
+      
+      const result = await apiService.addToCart(currentUserId, productId, 1);
+      
+      if (result.status === 'success') {
+        // Actualizar el carrito local
+        await loadUserCart();
+        
+        Swal.fire({
+          title: '¡Agregado al Carrito!',
+          html: `
+            <div style="text-align: center;">
+              <img src="${product.imagen_url}" alt="${product.nombre}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;"/>
+              <p><strong>${product.nombre}</strong></p>
+              <p>Precio: $${product.precio}</p>
+            </div>
+          `,
+          icon: 'success',
+          showCancelButton: true,
+          confirmButtonText: 'Ver Carrito',
+          cancelButtonText: 'Seguir Comprando',
+          confirmButtonColor: '#007bff'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Redirigir al carrito (puedes implementar esta función)
+            // navigate('/cart');
+            console.log('Ir al carrito...');
+          }
+        });
+      } else {
+        throw new Error(result.message || 'Error al agregar al carrito');
+      }
+    } catch (error) {
+      console.error('❌ Error adding to cart:', error);
+      Swal.fire({
+        title: 'Error',
+        text: error.message || 'No se pudo agregar el producto al carrito',
+        icon: 'error',
+        timer: 2000
+      });
+    }
+  };
+
+  // Función para manejar compra rápida
+  const handleQuickBuy = async (productId) => {
+    if (!currentUserId) {
+      Swal.fire({
+        title: 'Inicia sesión',
+        text: 'Debes iniciar sesión para comprar productos',
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        timer: 3000
+      });
+      return;
+    }
+
+    try {
+      const product = products.find(p => p.id === productId);
+      if (!product) {
+        throw new Error('Producto no encontrado');
+      }
+
+      if (product.stock === 0) {
+        Swal.fire({
+          title: 'Producto Agotado',
+          text: 'Lo sentimos, este producto no está disponible',
+          icon: 'warning',
+          timer: 2000
+        });
+        return;
+      }
+
+      // Agregar al carrito
+      const result = await apiService.addToCart(currentUserId, productId, 1);
+      
+      if (result.status === 'success') {
+        await loadUserCart();
+        
+        Swal.fire({
+          title: '¡Producto Agregado!',
+          text: 'Redirigiendo al checkout...',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false
+        }).then(() => {
+          // Redirigir al checkout
+          // navigate('/checkout');
+          console.log('Ir al checkout...');
+        });
+      } else {
+        throw new Error(result.message || 'Error al procesar la compra');
+      }
+    } catch (error) {
+      console.error('❌ Error in quick buy:', error);
+      Swal.fire({
+        title: 'Error',
+        text: error.message || 'No se pudo procesar la compra',
         icon: 'error',
         timer: 2000
       });
@@ -742,6 +1006,28 @@ export default function ArtHombre() {
                  <!-- BOTÓN DE ACCIÓN -->
                  <div style="display: flex; gap: 15px; align-items: center;">
                    <button 
+                     id="quick-buy-btn"
+                     style="height: 54px; 
+                            flex: 1;
+                            background: ${product.stock > 0 ? 'linear-gradient(135deg, #059669, #047857)' : '#94a3b8'}; 
+                            color: white; 
+                            border: none; 
+                            border-radius: 12px; 
+                            font-weight: 700; 
+                            font-size: 16px;
+                            cursor: ${product.stock > 0 ? 'pointer' : 'not-allowed'};
+                            transition: all 0.3s ease;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 12px;
+                            box-shadow: 0 8px 25px rgba(0,0,0,0.15);"
+                   >
+                     <i class="fas fa-bolt"></i>
+                     Comprar Ahora
+                   </button>
+                   <button 
+                     id="add-to-cart-btn"
                      style="height: 54px; 
                             flex: 1;
                             background: ${product.stock > 0 ? 'linear-gradient(135deg, #0f172a, #1e293b)' : '#94a3b8'}; 
@@ -757,7 +1043,6 @@ export default function ArtHombre() {
                             justify-content: center;
                             gap: 12px;
                             box-shadow: 0 8px 25px rgba(0,0,0,0.15);"
-                     onclick="handleAddToCart(${product.id})"
                    >
                      <i class="fas fa-shopping-cart"></i>
                      ${product.stock > 0 ? 'Agregar al Carrito' : 'Producto Agotado'}
@@ -787,10 +1072,18 @@ export default function ArtHombre() {
        focusConfirm: false,
        didOpen: () => {
          // Agregar event listeners para los botones dentro del modal
-         const addToCartBtn = document.querySelector('[onclick*="handleAddToCart"]');
+         const addToCartBtn = document.getElementById('add-to-cart-btn');
          if (addToCartBtn) {
            addToCartBtn.onclick = () => {
              handleAddToCart(product.id);
+             Swal.close();
+           };
+         }
+
+         const quickBuyBtn = document.getElementById('quick-buy-btn');
+         if (quickBuyBtn) {
+           quickBuyBtn.onclick = () => {
+             handleQuickBuy(product.id);
              Swal.close();
            };
          }
@@ -808,24 +1101,6 @@ export default function ArtHombre() {
        }
      });
    };
-  const handleAddToCart = (productId) => {
-    const product = products.find(p => p.id === productId);
-    Swal.fire({
-      title: '¡Camisa Agregada!',
-      html: `
-        <div style="text-align: center;">
-          <img src="${product.imagen_url}" alt="${product.nombre}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 10px; margin-bottom: 15px;"/>
-          <p><strong>${product.nombre}</strong></p>
-          <p>Precio: $${product.precio}</p>
-        </div>
-      `,
-      icon: 'success',
-      showCancelButton: true,
-      confirmButtonText: 'Ver Carrito',
-      cancelButtonText: 'Seguir Comprando',
-      confirmButtonColor: '#007bff'
-    });
-  };
 
   const renderRatingStars = (rating = 4.5) => {
     const stars = [];
