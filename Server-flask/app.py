@@ -657,30 +657,6 @@ def add_address():
         return jsonify({"error": str(e)}), 500
 
 
-# =====================================
-# ESTABLECER COMO PRINCIPAL
-# =====================================
-@app.route("/address/<int:address_id>/set_default", methods=["PUT"])
-def set_default_address(address_id):
-    try:
-        data = request.get_json()
-        user_id = data.get("user_id")
-
-        # quitar el estado principal de las demás direcciones
-        Address.query.filter_by(user_id=user_id).update({"principal": False})
-
-        # establecer la nueva dirección principal
-        addr = Address.query.get(address_id)
-        if not addr:
-            return jsonify({"error": "Dirección no encontrada"}), 404
-        addr.principal = True
-
-        db.session.commit()
-        return jsonify({"status": "success", "message": "Dirección principal actualizada"}), 200
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
 
 
 # =====================================
@@ -2059,6 +2035,1107 @@ def get_all_orders():
             "details": str(e)
         }), 500
 
+
+
+# =====================================
+# ESTABLECER COMO PRINCIPAL
+# =====================================
+@app.route("/address/<string:address_id>/set_default", methods=["PUT"])  # <- CAMBIA int por string
+def set_default_address(address_id):
+    try:
+        data = request.get_json()
+        user_id = data.get("user_id")
+
+        # quitar el estado principal de las demás direcciones
+        Address.query.filter_by(user_id=user_id).update({"principal": False})
+
+        # establecer la nueva dirección principal
+        addr = Address.query.get(address_id)
+        if not addr:
+            return jsonify({"error": "Dirección no encontrada"}), 404
+        addr.principal = True
+
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Dirección principal actualizada"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+    
+
+    # =====================================
+# EDITAR DIRECCIÓN EXISTENTE (VERSIÓN MEJORADA)
+# =====================================
+@app.route("/address/<string:address_id>/edit", methods=["PUT"])
+def edit_address(address_id):
+    try:
+        data = request.get_json()
+        
+        # Validar datos requeridos
+        if not data:
+            return jsonify({
+                "status": "error", 
+                "message": "No se enviaron datos"
+            }), 400
+
+        # Buscar la dirección
+        addr = Address.query.get(address_id)
+        if not addr:
+            return jsonify({
+                "status": "error",
+                "message": "Dirección no encontrada"
+            }), 404
+
+        # Verificar que el usuario existe
+        user = User.query.get(data.get("user_id"))
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "Usuario no encontrado"
+            }), 404
+
+        # Si se está estableciendo como principal, quitar principal de las demás
+        if data.get("principal"):
+            print(f"🔄 Estableciendo dirección {address_id} como principal para usuario {user.id}")
+            Address.query.filter_by(user_id=user.id).update({"principal": False})
+
+        # Actualizar campos solo si se enviaron en la petición
+        update_fields = []
+        if "direccion" in data:
+            addr.direccion = data["direccion"]
+            update_fields.append("direccion")
+        
+        if "ciudad" in data:
+            addr.ciudad = data["ciudad"]
+            update_fields.append("ciudad")
+        
+        if "estado_provincia" in data:
+            addr.estado_provincia = data["estado_provincia"]
+            update_fields.append("estado_provincia")
+        
+        if "codigo_postal" in data:
+            addr.codigo_postal = data["codigo_postal"]
+            update_fields.append("codigo_postal")
+        
+        if "pais" in data:
+            addr.pais = data["pais"]
+            update_fields.append("pais")
+        
+        if "tipo_direccion" in data:
+            addr.tipo_direccion = data["tipo_direccion"]
+            update_fields.append("tipo_direccion")
+        
+        if "principal" in data:
+            addr.principal = bool(data["principal"])
+            update_fields.append("principal")
+
+        # Validar que al menos un campo fue actualizado
+        if not update_fields:
+            return jsonify({
+                "status": "error",
+                "message": "No se proporcionaron campos para actualizar"
+            }), 400
+
+        db.session.commit()
+
+        print(f"✅ Dirección {address_id} actualizada. Campos modificados: {update_fields}")
+
+        return jsonify({
+            "status": "success",
+            "message": "Dirección actualizada correctamente",
+            "data": {
+                "id": addr.id,
+                "direccion": addr.direccion,
+                "ciudad": addr.ciudad,
+                "estado_provincia": addr.estado_provincia,
+                "codigo_postal": addr.codigo_postal,
+                "pais": addr.pais,
+                "tipo_direccion": addr.tipo_direccion,
+                "principal": addr.principal,
+                "campos_actualizados": update_fields
+            }
+        }), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        print(f"❌ Error de base de datos: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": "Error en la base de datos",
+            "details": str(e)
+        }), 500
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error interno: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": "Error interno del servidor",
+            "details": str(e)
+        }), 500
+    
+
+
+
+    # =====================================
+# OBTENER TODAS LAS ÓRDENES CON DETALLES COMPLETOS (PARA ADMIN)
+# =====================================
+@app.route("/admin/orders", methods=["GET"])
+def get_all_orders_admin():
+    try:
+        # Parámetros de paginación y filtros
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        estado = request.args.get('estado', None)
+        fecha_inicio = request.args.get('fecha_inicio', None)
+        fecha_fin = request.args.get('fecha_fin', None)
+        
+        # Consulta base con joins para obtener información completa
+        query = db.session.query(
+            Order, 
+            User, 
+            db.func.count(OrderDetail.id).label('total_productos'),
+            db.func.sum(OrderDetail.cantidad).label('total_items')
+        ).join(
+            User, Order.user_id == User.id
+        ).outerjoin(
+            OrderDetail, Order.id == OrderDetail.order_id
+        ).group_by(
+            Order.id, User.id
+        )
+        
+        # Aplicar filtros
+        if estado:
+            query = query.filter(Order.estado == estado)
+        
+        if fecha_inicio:
+            try:
+                fecha_inicio_dt = datetime.strptime(fecha_inicio, '%Y-%m-%d')
+                query = query.filter(Order.creado_en >= fecha_inicio_dt)
+            except ValueError:
+                return jsonify({
+                    "status": "error",
+                    "message": "Formato de fecha_inicio inválido. Use YYYY-MM-DD"
+                }), 400
+        
+        if fecha_fin:
+            try:
+                fecha_fin_dt = datetime.strptime(fecha_fin, '%Y-%m-%d')
+                # Incluir todo el día de la fecha_fin
+                fecha_fin_dt = fecha_fin_dt.replace(hour=23, minute=59, second=59)
+                query = query.filter(Order.creado_en <= fecha_fin_dt)
+            except ValueError:
+                return jsonify({
+                    "status": "error",
+                    "message": "Formato de fecha_fin inválido. Use YYYY-MM-DD"
+                }), 400
+        
+        # Ordenar por fecha de creación (más recientes primero)
+        query = query.order_by(Order.creado_en.desc())
+        
+        # Paginación
+        pagination = query.paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
+        
+        orders_list = []
+        for order, user, total_productos, total_items in pagination.items:
+            
+            # Obtener detalles completos de los productos
+            detalles_completos = []
+            for detalle in order.detalles:
+                producto = Product.query.get(detalle.product_id)
+                detalles_completos.append({
+                    "producto_id": producto.id if producto else None,
+                    "producto_nombre": producto.nombre if producto else "Producto no disponible",
+                    "producto_imagen": producto.imagen_url if producto else None,
+                    "cantidad": detalle.cantidad,
+                    "precio_unitario": float(detalle.precio_unitario),
+                    "subtotal": float(detalle.subtotal)
+                })
+            
+            # Información de la dirección de envío si existe
+            direccion_envio = None
+            if hasattr(order, 'address_id') and order.address_id:
+                address = Address.query.get(order.address_id)
+                if address:
+                    direccion_envio = {
+                        "direccion": address.direccion,
+                        "ciudad": address.ciudad,
+                        "estado_provincia": address.estado_provincia,
+                        "codigo_postal": address.codigo_postal,
+                        "pais": address.pais
+                    }
+            
+            order_data = {
+                "id": order.id,
+                "order_short_id": f"#ORD-{order.id[:8].upper()}",
+                "user_info": {
+                    "id": user.id,
+                    "nombre_completo": f"{user.Nombre} {user.Apellido}",
+                    "email": user.Email,
+                    "telefono": user.Telefono,
+                    "fecha_registro": user.Fecha_creacion.isoformat() if user.Fecha_creacion else None
+                },
+                "total": float(order.total),
+                "estado": order.estado,
+                "metodo_pago": order.metodo_pago,
+                "direccion_envio": direccion_envio,
+                "creado_en": order.creado_en.isoformat() if order.creado_en else None,
+                "resumen": {
+                    "total_productos": total_productos,
+                    "total_items": total_items or 0
+                },
+                "detalles": detalles_completos
+            }
+            
+            orders_list.append(order_data)
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "orders": orders_list,
+                "pagination": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total": pagination.total,
+                    "pages": pagination.pages
+                },
+                "estadisticas": {
+                    "total_ordenes": pagination.total,
+                    "ordenes_pendientes": Order.query.filter_by(estado='Pendiente').count(),
+                    "ordenes_completadas": Order.query.filter_by(estado='Entregado').count(),
+                    "ingresos_totales": db.session.query(db.func.sum(Order.total)).scalar() or 0
+                }
+            }
+        }), 200
+        
+    except SQLAlchemyError as e:
+        return jsonify({
+            "status": "error",
+            "message": "Error en la base de datos",
+            "details": str(e)
+        }), 500
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": "Error interno del servidor",
+            "details": str(e)
+        }), 500
+
+# =====================================
+# OBTENER ESTADÍSTICAS DE ÓRDENES (PARA DASHBOARD)
+# =====================================
+@app.route("/admin/orders/stats", methods=["GET"])
+def get_orders_stats():
+    try:
+        # Ventas totales
+        ventas_totales = db.session.query(db.func.sum(Order.total)).scalar() or 0
+        
+        # Conteo por estado
+        estados_count = db.session.query(
+            Order.estado, 
+            db.func.count(Order.id)
+        ).group_by(Order.estado).all()
+        
+        # Ventas del último mes
+        ultimo_mes = datetime.utcnow() - timedelta(days=30)
+        ventas_ultimo_mes = db.session.query(db.func.sum(Order.total)).filter(
+            Order.creado_en >= ultimo_mes
+        ).scalar() or 0
+        
+        # Órdenes del último mes
+        ordenes_ultimo_mes = Order.query.filter(
+            Order.creado_en >= ultimo_mes
+        ).count()
+        
+        # Productos más vendidos (top 5)
+        productos_mas_vendidos = db.session.query(
+            Product.nombre,
+            db.func.sum(OrderDetail.cantidad).label('total_vendido')
+        ).join(
+            OrderDetail, Product.id == OrderDetail.product_id
+        ).group_by(
+            Product.id, Product.nombre
+        ).order_by(
+            db.desc('total_vendido')
+        ).limit(5).all()
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "ventas_totales": float(ventas_totales),
+                "ventas_ultimo_mes": float(ventas_ultimo_mes),
+                "ordenes_ultimo_mes": ordenes_ultimo_mes,
+                "conteo_estados": {estado: count for estado, count in estados_count},
+                "productos_mas_vendidos": [
+                    {"producto": nombre, "total_vendido": int(total)} 
+                    for nombre, total in productos_mas_vendidos
+                ]
+            }
+        }), 200
+        
+    except SQLAlchemyError as e:
+        return jsonify({
+            "status": "error",
+            "message": "Error en la base de datos",
+            "details": str(e)
+        }), 500
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": "Error interno del servidor",
+            "details": str(e)
+        }), 500
+
+# =====================================
+# ACTUALIZAR ESTADO DE ORDEN (ADMIN)
+# =====================================
+@app.route("/admin/orders/<string:order_id>/status", methods=["PUT"])
+def update_order_status_admin(order_id):
+    try:
+        data = request.get_json()
+        
+        if not data or 'estado' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "Se requiere el campo 'estado'"
+            }), 400
+        
+        nuevo_estado = data['estado']
+        
+        # Estados válidos
+        estados_validos = ['Pendiente', 'Confirmado', 'En preparación', 'Enviado', 'Entregado', 'Cancelado']
+        
+        if nuevo_estado not in estados_validos:
+            return jsonify({
+                "status": "error",
+                "message": f"Estado no válido. Estados permitidos: {', '.join(estados_validos)}"
+            }), 400
+        
+        # Obtener y actualizar la orden
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({
+                "status": "error",
+                "message": "Orden no encontrada"
+            }), 404
+        
+        estado_anterior = order.estado
+        order.estado = nuevo_estado
+        
+        # Si se cancela una orden, devolver productos al stock
+        if nuevo_estado == 'Cancelado' and estado_anterior != 'Cancelado':
+            for detalle in order.detalles:
+                producto = Product.query.get(detalle.product_id)
+                if producto:
+                    producto.stock += detalle.cantidad
+                    producto.actualizado_en = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Estado de la orden actualizado de '{estado_anterior}' a '{nuevo_estado}'",
+            "data": {
+                "order_id": order.id,
+                "estado_anterior": estado_anterior,
+                "nuevo_estado": nuevo_estado,
+                "actualizado_en": datetime.utcnow().isoformat()
+            }
+        }), 200
+        
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": "Error en la base de datos",
+            "details": str(e)
+        }), 500
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": "Error interno del servidor",
+            "details": str(e)
+        }), 500
+    
+
+
+from sqlalchemy import func
+
+@app.route('/admin/products/count-stats', methods=['GET'])
+def get_products_count_stats():
+    try:
+        # Contar productos activos con stock > 0
+        total_products = Product.query.filter_by(activo=True).filter(Product.stock > 0).count()
+        
+        # Sumar stock total de productos activos
+        total_stock_result = db.session.query(func.sum(Product.stock)).filter(
+            Product.activo == True,
+            Product.stock > 0
+        ).scalar()
+        total_stock = total_stock_result if total_stock_result else 0
+        
+        # Contar productos por categoría
+        category_stats = db.session.query(
+            Category.nombre,
+            func.count(Product.id),
+            func.sum(Product.stock)
+        ).join(Product, Category.id == Product.categoria_id).filter(
+            Product.activo == True,
+            Product.stock > 0
+        ).group_by(Category.nombre).all()
+        
+        # Contar productos por género
+        gender_stats = db.session.query(
+            Product.genero,
+            func.count(Product.id),
+            func.sum(Product.stock)
+        ).filter(
+            Product.activo == True,
+            Product.stock > 0
+        ).group_by(Product.genero).all()
+        
+        # Procesar datos de categorías
+        categorias_data = {}
+        for cat_nombre, count, stock in category_stats:
+            categorias_data[cat_nombre] = {
+                'total': count,
+                'stock_total': stock if stock else 0
+            }
+        
+        # Procesar datos de géneros
+        generos_data = {}
+        for genero, count, stock in gender_stats:
+            genero_nombre = genero if genero else 'Unisex'
+            generos_data[genero_nombre] = {
+                'count': count,
+                'stock': stock if stock else 0
+            }
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'total_productos': total_products,
+                'total_stock': total_stock,
+                'categorias': categorias_data,
+                'generos': generos_data
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error getting product stats: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Error al obtener estadísticas de productos',
+            'error': str(e)
+        }), 500
+    
+    # ===========================
+# ENDPOINTS PARA PRODUCTOS
+# ===========================
+
+
+      # ===========================
+# ENDPOINTS CORREGIDOS PARA PRODUCTOS
+# ===========================
+
+
+from sqlalchemy import or_
+# ===========================
+# ENDPOINTS PARA PRODUCTOS
+# ===========================
+
+
+
+# Obtener todos los productos con filtros
+@app.route('/admin/products', methods=['GET'])
+def get_allt_products():
+    try:
+        print("=== INICIANDO CONSULTA DE PRODUCTOS ===")
+        
+        # Parámetros de filtro
+        search = request.args.get('search', '')
+        categoria = request.args.get('categoria', '')
+        estado = request.args.get('estado', '')
+        
+        print(f"Filtros recibidos - search: '{search}', categoria: '{categoria}', estado: '{estado}'")
+        
+        # Consulta base con join explícito
+        query = db.session.query(Product, Category).join(Category, Product.categoria_id == Category.id)
+        
+        # Aplicar filtros
+        if search:
+            query = query.filter(
+                or_(
+                    Product.nombre.ilike(f'%{search}%'),
+                    Product.descripcion.ilike(f'%{search}%'),
+                    Category.nombre.ilike(f'%{search}%')
+                )
+            )
+            print(f"Aplicando filtro de búsqueda: {search}")
+        
+        if categoria:
+            query = query.filter(Category.nombre == categoria)
+            print(f"Aplicando filtro de categoría: {categoria}")
+        
+        if estado == 'active':
+            query = query.filter(Product.activo == True, Product.stock > 0)
+            print("Filtrando productos activos con stock")
+        elif estado == 'inactive':
+            query = query.filter(Product.activo == False)
+            print("Filtrando productos inactivos")
+        elif estado == 'outofstock':
+            query = query.filter(Product.stock == 0)
+            print("Filtrando productos sin stock")
+        
+        # Ejecutar consulta
+        results = query.all()
+        print(f"Productos encontrados: {len(results)}")
+        
+        # Formatear respuesta
+        products_data = []
+        for product, category in results:
+            product_data = {
+                'id': product.id,
+                'nombre': product.nombre,
+                'descripcion': product.descripcion or '',
+                'precio': float(product.precio),
+                'stock': product.stock,
+                'imagen_url': product.imagen_url or '',
+                'genero': product.genero,
+                'categoria': category.nombre,
+                'categoria_id': product.categoria_id,
+                'activo': product.activo,
+                'creado_en': product.creado_en.isoformat() if product.creado_en else None
+            }
+            products_data.append(product_data)
+            print(f"Producto: {product.nombre}, Categoría: {category.nombre}")
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'products': products_data,
+                'total': len(products_data)
+            }
+        })
+        
+    except Exception as e:
+        print(f"❌ ERROR en get_all_products: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        
+        return jsonify({
+            'status': 'error',
+            'message': f'Error al obtener los productos: {str(e)}'
+        }), 500
+
+# Obtener un producto específico
+@app.route('/admin/products/<product_id>', methods=['GET'])
+def get_product(product_id):
+    try:
+        product = Product.query.filter_by(id=product_id).first()
+        
+        if not product:
+            return jsonify({
+                'status': 'error',
+                'message': 'Producto no encontrado'
+            }), 404
+        
+        product_data = {
+            'id': product.id,
+            'nombre': product.nombre,
+            'descripcion': product.descripcion,
+            'precio': product.precio,
+            'stock': product.stock,
+            'imagen_url': product.imagen_url,
+            'genero': product.genero,
+            'categoria': product.categoria.nombre,
+            'categoria_id': product.categoria_id,
+            'activo': product.activo,
+            'creado_en': product.creado_en.isoformat() if product.creado_en else None,
+            'actualizado_en': product.actualizado_en.isoformat() if product.actualizado_en else None
+        }
+        
+        return jsonify({
+            'status': 'success',
+            'data': product_data
+        })
+        
+    except Exception as e:
+        print(f"Error getting product: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Error al obtener el producto'
+        }), 500
+
+# Crear nuevo producto
+@app.route('/admin/products', methods=['POST'])
+def create_product():
+    try:
+        data = request.get_json()
+        
+        # Validar datos requeridos
+        required_fields = ['nombre', 'precio', 'categoria_id', 'genero']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({
+                    'status': 'error',
+                    'message': f'El campo {field} es requerido'
+                }), 400
+        
+        # Verificar que la categoría existe
+        categoria = Category.query.filter_by(id=data['categoria_id']).first()
+        if not categoria:
+            return jsonify({
+                'status': 'error',
+                'message': 'La categoría no existe'
+            }), 400
+        
+        # Crear producto
+        new_product = Product(
+            nombre=data['nombre'],
+            descripcion=data.get('descripcion', ''),
+            precio=float(data['precio']),
+            stock=int(data.get('stock', 0)),
+            imagen_url=data.get('imagen_url', ''),
+            genero=data['genero'],
+            categoria_id=data['categoria_id'],
+            activo=data.get('activo', True)
+        )
+        
+        db.session.add(new_product)
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Producto creado exitosamente',
+            'data': {
+                'id': new_product.id,
+                'nombre': new_product.nombre
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error creating product: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Error al crear el producto'
+        }), 500
+
+# Actualizar producto
+@app.route('/admin/products/<product_id>', methods=['PUT'])
+def update_product(product_id):
+    try:
+        product = Product.query.filter_by(id=product_id).first()
+        
+        if not product:
+            return jsonify({
+                'status': 'error',
+                'message': 'Producto no encontrado'
+            }), 404
+        
+        data = request.get_json()
+        
+        # Actualizar campos
+        if 'nombre' in data:
+            product.nombre = data['nombre']
+        if 'descripcion' in data:
+            product.descripcion = data['descripcion']
+        if 'precio' in data:
+            product.precio = float(data['precio'])
+        if 'stock' in data:
+            product.stock = int(data['stock'])
+        if 'imagen_url' in data:
+            product.imagen_url = data['imagen_url']
+        if 'genero' in data:
+            product.genero = data['genero']
+        if 'categoria_id' in data:
+            # Verificar que la categoría existe
+            categoria = Category.query.filter_by(id=data['categoria_id']).first()
+            if not categoria:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'La categoría no existe'
+                }), 400
+            product.categoria_id = data['categoria_id']
+        if 'activo' in data:
+            product.activo = bool(data['activo'])
+        
+        product.actualizado_en = db.func.now()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Producto actualizado exitosamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating product: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Error al actualizar el producto'
+        }), 500
+# Eliminar producto (soft delete) - URL CORREGIDA
+@app.route('/admin/products/<product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    try:
+        product = Product.query.filter_by(id=product_id).first()
+        
+        if not product:
+            return jsonify({
+                'status': 'error',
+                'message': 'Producto no encontrado'
+            }), 404
+        
+        # Soft delete - marcar como inactivo
+        product.activo = False
+        product.actualizado_en = db.func.now()
+        
+        db.session.commit()
+        
+        print(f"✅ Producto eliminado (soft delete): {product.nombre} (ID: {product_id})")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Producto eliminado exitosamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error deleting product: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Error al eliminar el producto'
+        }), 500
+    
+@app.route('/admin/categories', methods=['GET'])
+def get_categories():
+    try:
+        print("=== OBTENIENDO CATEGORÍAS ===")
+        categories = Category.query.all()
+        print(f"Categorías encontradas: {len(categories)}")
+        
+        categories_data = []
+        for cat in categories:
+            categories_data.append({
+                'id': cat.id,
+                'nombre': cat.nombre,
+                'descripcion': cat.descripcion or ''
+            })
+            print(f"Categoría: {cat.nombre} (ID: {cat.id})")
+        
+        return jsonify({
+            'status': 'success',
+            'data': categories_data
+        })
+        
+    except Exception as e:
+        print(f"❌ ERROR en get_categories: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Error al obtener las categorías: {str(e)}'
+        }), 500
+
+# ===========================
+# ENDPOINT PARA MÉTODOS DE PAGO MEJORADO
+# ===========================
+@app.route('/admin/orders/payment-methods-detailed', methods=['GET'])
+def get_detailed_payment_methods():
+    try:
+        print("=== OBTENIENDO ESTADÍSTICAS DETALLADAS DE MÉTODOS DE PAGO ===")
+        
+        # Consulta para órdenes completadas con método de pago
+        payment_stats = db.session.query(
+            Order.metodo_pago,
+            func.count(Order.id),
+            func.sum(Order.total)
+        ).filter(
+            Order.metodo_pago.isnot(None),
+            Order.metodo_pago != '',
+            Order.estado.in_(['Completado', 'Entregado', 'Confirmado'])
+        ).group_by(Order.metodo_pago).all()
+        
+        print(f"Métodos de pago encontrados: {len(payment_stats)}")
+        
+        # Mapeo COMPLETO y normalización de métodos de pago
+        method_mapping = {
+            # Tarjetas de crédito
+            'visa': 'Visa',
+            'mastercard': 'Mastercard', 
+            'masterrcad': 'Mastercard',  # Corrige typo
+            'amex': 'American Express',
+            'american express': 'American Express',
+            'american_express': 'American Express',
+            'credit_card': 'Tarjeta Crédito',
+            'credit card': 'Tarjeta Crédito',
+            'credito': 'Tarjeta Crédito',
+            'crédito': 'Tarjeta Crédito',
+            
+            # Tarjetas de débito
+            'debit_card': 'Tarjeta Débito',
+            'debit card': 'Tarjeta Débito',
+            'debito': 'Tarjeta Débito',
+            'débito': 'Tarjeta Débito',
+            
+            # Otros métodos
+            'paypal': 'PayPal',
+            'transfer': 'Transferencia',
+            'transferencia': 'Transferencia',
+            'cash': 'Efectivo',
+            'efectivo': 'Efectivo',
+            'card': 'Tarjeta',
+            'oxxo': 'OXXO',
+            'spei': 'SPEI',
+            'mercado pago': 'Mercado Pago',
+            'mercado_pago': 'Mercado Pago'
+        }
+        
+        # Diccionario para agrupar métodos normalizados
+        grouped_data = {}
+        
+        for method, count, amount in payment_stats:
+            if not method:
+                continue
+                
+            # Normalizar el método (minúsculas, sin espacios extras)
+            method_clean = method.strip().lower()
+            
+            # Buscar en el mapeo o usar el nombre original
+            normalized_method = method_mapping.get(method_clean, method.title())
+            
+            print(f"Método original: '{method}' -> Normalizado: '{normalized_method}'")
+            
+            # Agrupar por método normalizado
+            if normalized_method in grouped_data:
+                grouped_data[normalized_method]['cantidad'] += count
+                grouped_data[normalized_method]['monto_total'] += float(amount) if amount else 0
+                grouped_data[normalized_method]['metodos_originales'].add(method)
+            else:
+                grouped_data[normalized_method] = {
+                    'cantidad': count,
+                    'monto_total': float(amount) if amount else 0,
+                    'metodos_originales': {method}
+                }
+        
+        # Convertir a lista final
+        payment_data = []
+        total_orders = 0
+        total_amount = 0
+        
+        for method_name, data in grouped_data.items():
+            payment_data.append({
+                'metodo': method_name,
+                'cantidad': data['cantidad'],
+                'monto_total': data['monto_total'],
+                'metodos_originales': list(data['metodos_originales']),
+                'variantes': len(data['metodos_originales'])
+            })
+            
+            total_orders += data['cantidad']
+            total_amount += data['monto_total']
+            
+            print(f"✅ {method_name}: {data['cantidad']} órdenes, ${data['monto_total']:.2f} (variantes: {data['metodos_originales']})")
+        
+        # Ordenar por cantidad (más popular primero)
+        payment_data.sort(key=lambda x: x['cantidad'], reverse=True)
+        
+        # Calcular porcentajes
+        for data in payment_data:
+            data['porcentaje'] = round((data['cantidad'] / total_orders) * 100, 1) if total_orders > 0 else 0
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'metodos_pago': payment_data,
+                'totales': {
+                    'ordenes': total_orders,
+                    'monto': total_amount,
+                    'metodos_diferentes': len(payment_data),
+                    'variantes_encontradas': sum(item['variantes'] for item in payment_data)
+                },
+                'resumen': f"Analizadas {total_orders} órdenes con {len(payment_data)} métodos de pago diferentes"
+            }
+        })
+        
+    except Exception as e:
+        print(f"❌ ERROR en get_detailed_payment_methods: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Error al obtener métodos de pago: {str(e)}'
+        }), 500
+
+
+        # ===========================
+# ENDPOINTS PARA CATEGORÍAS
+# ===========================
+
+
+
+# ===========================
+# ENDPOINTS PARA CATEGORÍAS (CORREGIDOS)
+# ===========================
+
+
+# Crear nueva categoría (CORREGIDO)
+@app.route('/admin/categories', methods=['POST'])
+def create_category():
+    try:
+        data = request.get_json()
+        print(f"🔍 Datos recibidos para crear categoría: {data}")
+        
+        # Validar datos requeridos
+        if not data.get('nombre'):
+            return jsonify({
+                'status': 'error',
+                'message': 'El nombre de la categoría es requerido'
+            }), 400
+        
+        nombre = data['nombre'].strip()
+        
+        # Verificar si ya existe una categoría con el mismo nombre
+        # QUITAMOS la referencia al campo 'activo' que no existe
+        existing_category = Category.query.filter(
+            db.func.lower(Category.nombre) == nombre.lower()
+        ).first()
+        
+        if existing_category:
+            return jsonify({
+                'status': 'error',
+                'message': 'Ya existe una categoría con ese nombre'
+            }), 400
+        
+        # Crear categoría - solo con los campos que tienes en tu modelo
+        new_category = Category(
+            nombre=nombre,
+            descripcion=data.get('descripcion', '')
+            # No incluimos 'activo' porque no existe en tu modelo
+        )
+        
+        db.session.add(new_category)
+        db.session.commit()
+        
+        print(f"✅ Categoría creada: {new_category.nombre} (ID: {new_category.id})")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Categoría creada exitosamente',
+            'data': {
+                'id': new_category.id,
+                'nombre': new_category.nombre
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error creating category: {str(e)}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Error al crear la categoría',
+            'error': str(e)
+        }), 500
+
+# Actualizar categoría (CORREGIDO)
+@app.route('/admin/categories/<category_id>', methods=['PUT'])
+def update_category(category_id):
+    try:
+        category = Category.query.get(category_id)
+        
+        if not category:
+            return jsonify({
+                'status': 'error',
+                'message': 'Categoría no encontrada'
+            }), 404
+        
+        data = request.get_json()
+        
+        # Actualizar campos
+        if 'nombre' in data:
+            nuevo_nombre = data['nombre'].strip()
+            
+            # Verificar si el nuevo nombre ya existe en otra categoría
+            existing_category = Category.query.filter(
+                db.func.lower(Category.nombre) == nuevo_nombre.lower(),
+                Category.id != category_id
+            ).first()
+            
+            if existing_category:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Ya existe otra categoría con ese nombre'
+                }), 400
+            
+            category.nombre = nuevo_nombre
+        
+        if 'descripcion' in data:
+            category.descripcion = data['descripcion']
+        
+        # Actualizar timestamp si tienes el campo
+        if hasattr(category, 'actualizado_en'):
+            category.actualizado_en = db.func.now()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Categoría actualizada exitosamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating category: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Error al actualizar la categoría'
+        }), 500
+
+# Eliminar categoría (CORREGIDO - sin soft delete)
+@app.route('/admin/categories/<category_id>', methods=['DELETE'])
+def delete_category(category_id):
+    try:
+        category = Category.query.get(category_id)
+        
+        if not category:
+            return jsonify({
+                'status': 'error',
+                'message': 'Categoría no encontrada'
+            }), 404
+        
+        # Verificar si hay productos usando esta categoría
+        products_count = Product.query.filter_by(categoria_id=category_id).count()
+        
+        if products_count > 0:
+            return jsonify({
+                'status': 'error',
+                'message': f'No se puede eliminar la categoría porque tiene {products_count} producto(s) asociado(s)'
+            }), 400
+        
+        # Eliminación directa (no soft delete)
+        db.session.delete(category)
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Categoría eliminada exitosamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting category: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Error al eliminar la categoría'
+        }), 500
+    
+    
 # =====================================
 # EJECUCIÓN
 # =====================================

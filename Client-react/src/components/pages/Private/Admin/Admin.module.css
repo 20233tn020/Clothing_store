@@ -1,3 +1,25 @@
+.btnInfo{
+      margin-top: 15px;
+  padding: 8px 16px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.refreshBtn{
+      padding: 10px 15px;
+  border: none;
+  border-radius: 8px;
+  background: #6c757d;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
 .tabContent {
   animation: fadeIn 0.3s ease;
 }

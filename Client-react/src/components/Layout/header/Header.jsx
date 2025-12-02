@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import Perfil from '../../pages/Private/perfil';
 import LogoutLink from '../../Auth/logout/LogoutLink';
 import './header.css';
 import { Link } from 'react-router-dom';
@@ -167,19 +166,20 @@ const loadCartsCount = async (userId) => {
                 <li><Link to={"/ArtHombre"}>Camisas</Link></li>
                 <li><Link to={"/PantalonHombres"}>Pantalones</Link></li>
                 <li><Link to={"/Chaquetas"}>Chaquetas</Link></li>
+                <li><Link to={"/ArtHombreZapatosTenis"}>Tenis y Zapatos</Link></li>
               </ul>
             </li>
             <li><Link to={"/Mujer"}><i className="fas fa-female"></i> Mujeres</Link>
               <ul>
-                <li><a href="#">Vestidos</a></li>
-                <li><a href="#">Blusas</a></li>
-                <li><a href="#">Zapatos</a></li>
+                <li><Link to={"/ArtMujerVestidos"}>Vestidos</Link></li>
+                 <li><Link to={"/BlusasMujer"}>Blusas</Link></li>
+                <li><Link to={"/ArtMujerZapatos"}>Zapatos</Link></li>
               </ul>
             </li>
             <li><Link to={"/Accesorios"}><i className="fas fa-gem"></i> Accesorios</Link>
               <ul>
                 <li><a href="#">Bolsos</a></li>
-                <li><a href="#">Relojes</a></li>
+                <li><Link to={"/AccesoriosRelojes"}>LiRelojes</Link></li>
               </ul>
             </li>
             <li><Link to={"/Ofertas"}><i className="fas fa-tag"></i> Ofertas</Link></li>

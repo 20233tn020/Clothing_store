@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '../../Layout/header/Header';
 import Swal from 'sweetalert2';
-import styles from './Hombre.module.css';
+import './blusasMujer.css';
 import { Footer } from '../../Layout/footer/Footer';
 import { FloatingWhatsApp } from '../../FloatingWhatsApp/FloatingWhatsApp';
 import { useNavigate } from 'react-router-dom';
@@ -26,23 +26,6 @@ const apiService = {
       return data;
     } catch (error) {
       console.error('Error fetching categories:', error);
-      throw error;
-    }
-  },
-
-  async getProductsByGender(gender) {
-    try {
-      const response = await fetch('http://localhost:5000/products');
-      const data = await response.json();
-      
-      if (data.status === 'success') {
-        return data.data.filter(product => 
-          product.genero && product.genero.toLowerCase() === gender.toLowerCase()
-        );
-      }
-      return [];
-    } catch (error) {
-      console.error('Error fetching products by gender:', error);
       throw error;
     }
   },
@@ -118,7 +101,7 @@ const apiService = {
       throw error;
     }
   },
-  
+
   // SERVICIO DEL CARRITO
   async getCart(userId) {
     try {
@@ -131,8 +114,6 @@ const apiService = {
     }
   },
 
-
-  
   async addToCart(userId, productId, cantidad = 1) {
     try {
       const response = await fetch('http://localhost:5000/cart/add', {
@@ -218,29 +199,38 @@ const apiService = {
   }
 };
 
-export default function Hombre() {
+export default function BlusasMujer() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('aleatorio');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState('grid');
-  const [applySearch, setApplySearch] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('todos');
+  const [sortBy, setSortBy] = useState('popularidad');
   const [categories, setCategories] = useState([]);
+  const [applySearch, setApplySearch] = useState(false);
   
   const navigate = useNavigate();
   // ESTADOS PARA FAVORITOS
   const [favorites, setFavorites] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
 
-    // ESTADOS PARA EL CARRITO
-    const [cart, setCart] = useState(null);
-    const [cartItems, setCartItems] = useState([]);
-    const [cartTotal, setCartTotal] = useState(0);
-    const [cartCount, setCartCount] = useState(0);
+  // ESTADOS PARA EL CARRITO
+  const [cart, setCart] = useState(null);
+  const [cartItems, setCartItems] = useState([]);
+  const [cartTotal, setCartTotal] = useState(0);
+  const [cartCount, setCartCount] = useState(0);
 
-  const productsPerPage = 12;
+  // Categorías específicas para blusas - como estado
+  const initialBlusasCategories = [
+    { id: 'todos', name: 'Todas las Blusas', count: 0 },
+    { id: 'formales', name: 'Blusas Formales', count: 0 },
+    { id: 'casuales', name: 'Casuales', count: 0 },
+    { id: 'elegantes', name: 'Blusas Elegantes', count: 0 },
+    { id: 'verano', name: 'Blusas de Verano', count: 0 },
+    { id: 'encaje', name: 'Blusas de Encaje', count: 0 },
+    { id: 'seda', name: 'Blusas de Seda', count: 0 },
+    { id: 'mangas', name: 'Blusas de Mangas', count: 0 }
+  ];
 
   // Obtener el usuario del localStorage
   useEffect(() => {
@@ -251,13 +241,13 @@ export default function Hombre() {
       if (userData) {
         try {
           const user = JSON.parse(userData);
-          console.log('✅ User parsed:', user);
+          console.log(' User parsed:', user);
           setCurrentUserId(user.id);
         } catch (error) {
-          console.error('❌ Error parsing user data:', error);
+          console.error(' Error parsing user data:', error);
         }
       } else {
-        console.warn('⚠️ No hay usuario logueado en localStorage');
+        console.warn(' No hay usuario logueado en localStorage');
       }
     };
     
@@ -266,39 +256,40 @@ export default function Hombre() {
 
   // useEffect principal - AHORA DEPENDE DE currentUserId
   useEffect(() => {
-    console.log('🎯 Main useEffect running, currentUserId:', currentUserId);
+    console.log(' Main useEffect running, currentUserId:', currentUserId);
+    setCategories(initialBlusasCategories);
     loadDataFromAPI();
     
     if (currentUserId) {
-      console.log('👤 Loading favorites for user:', currentUserId);
+      console.log(' Loading favorites and cart for user:', currentUserId);
       loadUserFavorites();
+      loadUserCart();
     } else {
-      console.log('⏳ Waiting for user ID to load favorites...');
+      console.log(' Waiting for user ID to load favorites and cart...');
     }
   }, [currentUserId]);
 
   // Cargar favoritos del usuario
   const loadUserFavorites = async () => {
     if (!currentUserId) {
-      console.warn('⏹️ Cannot load favorites: no user ID');
+      console.warn(' Cannot load favorites: no user ID');
       return;
     }
 
     try {
-      console.log('🔄 Loading favorites for user:', currentUserId);
+      console.log(' Loading favorites for user:', currentUserId);
       const favoritesData = await apiService.getFavorites(currentUserId);
       if (favoritesData.status === 'success') {
         const favoriteIds = favoritesData.data.map(fav => fav.producto.id);
-        console.log('✅ Favorites loaded:', favoriteIds);
+        console.log(' Favorites loaded:', favoriteIds);
         setFavorites(favoriteIds);
       } else {
-        console.error('❌ Error in favorites response:', favoritesData);
+        console.error(' Error in favorites response:', favoritesData);
       }
     } catch (error) {
-      console.error('❌ Error loading favorites:', error);
+      console.error(' Error loading favorites:', error);
     }
   };
-
 
   // Cargar carrito del usuario
   const loadUserCart = async () => {
@@ -355,7 +346,7 @@ export default function Hombre() {
           setFavorites(prev => prev.filter(id => id !== productId));
           Swal.fire({
             title: 'Removido de Favoritos',
-            text: 'El producto se ha removido de tus favoritos',
+            text: 'La blusa se ha removido de tus favoritos',
             icon: 'success',
             timer: 1500,
             showConfirmButton: false
@@ -370,7 +361,7 @@ export default function Hombre() {
           setFavorites(prev => [...prev, productId]);
           Swal.fire({
             title: '¡Agregado a Favoritos!',
-            text: 'El producto se ha agregado a tus favoritos',
+            text: 'La blusa se ha agregado a tus favoritos',
             icon: 'success',
             timer: 1500,
             showConfirmButton: false
@@ -445,8 +436,8 @@ export default function Hombre() {
           confirmButtonColor: '#007bff'
         }).then((result) => {
           if (result.isConfirmed) {
-            //Redirigir al carrito (puedes implementar esta función)
-             navigate('/Carrito');
+            // Redirigir al carrito (puedes implementar esta función)
+            navigate('/Carrito');
             console.log('Ir al carrito...');
           }
         });
@@ -463,7 +454,6 @@ export default function Hombre() {
       });
     }
   };
-
 
   // Función para manejar compra rápida
   const handleQuickBuy = async (productId) => {
@@ -525,121 +515,6 @@ export default function Hombre() {
     }
   };
 
-
-  const loadDataFromAPI = async () => {
-    try {
-      setLoading(true);
-      
-      // Cargar productos para hombre desde la API
-      const productsHombre = await apiService.getProductsByGender('hombre');
-      
-      if (productsHombre.length === 0) {
-        // Si no hay productos, usar datos mock como fallback
-        loadMockData();
-      } else {
-        setProducts(productsHombre);
-        setFilteredProducts(productsHombre);
-      }
-      
-      // Cargar categorías
-      const categoriesResponse = await apiService.getCategories();
-      if (categoriesResponse.status === 'success') {
-        setCategories(categoriesResponse.data);
-      }
-      
-    } catch (error) {
-      console.error('Error loading data from API:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'No se pudieron cargar los productos. Mostrando datos de ejemplo.',
-        icon: 'error',
-        confirmButtonText: 'Entendido'
-      });
-      loadMockData();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Datos mock como fallback
-  const loadMockData = () => {
-    const mockProducts = [
-      {
-        id: 1,
-        nombre: "Camiseta Básica Premium",
-        descripcion: "Camiseta de algodón 100% de alta calidad, perfecta para looks casuales y elegantes.",
-        precio: 29.99,
-        imagen_url: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=500&q=80",
-        genero: "hombre",
-        categoria_id: 1,
-        categoria_nombre: "Camisetas",
-        stock: 15,
-        creado_en: new Date().toISOString(),
-        rating: 4.5,
-        tallas: ["S", "M", "L", "XL"],
-        colores: ["Blanco", "Negro", "Azul", "Gris"]
-      },
-      {
-        id: 2,
-        nombre: "Jeans Slim Fit Modernos",
-        descripcion: "Jeans ajustados con tecnología stretch para máxima comodidad y estilo urbano.",
-        precio: 59.99,
-        imagen_url: "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=500&q=80",
-        genero: "hombre",
-        categoria_id: 2,
-        categoria_nombre: "Pantalones",
-        stock: 8,
-        creado_en: new Date().toISOString(),
-        rating: 4.8,
-        tallas: ["30", "32", "34", "36"],
-        colores: ["Azul oscuro", "Negro", "Gris"]
-      },
-      {
-        id: 3,
-        nombre: "Chaqueta Deportiva Performance",
-        descripcion: "Chaqueta técnica para actividades outdoor con protección contra el viento y agua.",
-        precio: 89.99,
-        imagen_url: "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=500&q=80",
-        genero: "hombre",
-        categoria_id: 3,
-        categoria_nombre: "Chaquetas",
-        stock: 12,
-        creado_en: new Date().toISOString(),
-        rating: 4.6,
-        tallas: ["M", "L", "XL", "XXL"],
-        colores: ["Negro", "Azul marino", "Verde"]
-      },
-      {
-        id: 4,
-        nombre: "Zapatos Casuales Urbanos",
-        descripcion: "Calzado urbano que combina estilo y comodidad para el día a día.",
-        precio: 79.99,
-        imagen_url: "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=500&q=80",
-        genero: "hombre",
-        categoria_id: 4,
-        categoria_nombre: "Calzado",
-        stock: 20,
-        creado_en: new Date().toISOString(),
-        rating: 4.7,
-        tallas: ["40", "41", "42", "43", "44"],
-        colores: ["Marrón", "Negro", "Azul"]
-      }
-    ];
-    
-    setProducts(mockProducts);
-    setFilteredProducts(mockProducts);
-  };
-
-  // Función para mezclar array aleatoriamente (Fisher-Yates shuffle)
-  const shuffleArray = (array) => {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  };
-
   // FILTRADO MANUAL - useEffect modificado
   useEffect(() => {
     let filtered = [...products];
@@ -650,6 +525,13 @@ export default function Hombre() {
         product.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.descripcion.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (product.categoria_nombre && product.categoria_nombre.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    // Filtrar por categoría de blusa
+    if (selectedCategory !== 'todos') {
+      filtered = filtered.filter(product => 
+        mapProductToBlusaCategory(product) === selectedCategory
       );
     }
 
@@ -667,24 +549,192 @@ export default function Hombre() {
       case 'valoracion':
         filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
         break;
-      case 'aleatorio':
-        // Mezclar aleatoriamente
-        filtered = shuffleArray(filtered);
-        break;
       default:
-        // Popularidad (por defecto) - ordenar por ID o rating
         filtered.sort((a, b) => b.id - a.id);
     }
 
     setFilteredProducts(filtered);
-    setCurrentPage(1);
-  }, [products, searchTerm, sortBy, applySearch]);
+  }, [products, searchTerm, selectedCategory, sortBy, applySearch]);
 
-  // Paginación
-  const indexOfLastProduct = currentPage * productsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+  const loadDataFromAPI = async () => {
+    try {
+      setLoading(true);
+      
+      const productsResponse = await apiService.getProducts();
+
+      if (productsResponse.status === 'success') {
+        // Filtrar solo productos para mujer que sean blusas
+        const blusasMujer = productsResponse.data.filter(product => 
+          product.genero && 
+          product.genero.toLowerCase() === 'mujer' &&
+          // Asumimos que las blusas tienen categorías relacionadas con blusas
+          (product.categoria_nombre?.toLowerCase().includes('blus') ||
+           product.nombre?.toLowerCase().includes('blus') ||
+           product.descripcion?.toLowerCase().includes('blus'))
+        );
+
+        // Si no hay blusas en la API, usar datos mock
+        if (blusasMujer.length === 0) {
+          loadMockData();
+        } else {
+          setProducts(blusasMujer);
+          setFilteredProducts(blusasMujer);
+          updateCategoriesCount(blusasMujer);
+        }
+      } else {
+        throw new Error('Error en la respuesta de la API');
+      }
+      
+    } catch (error) {
+      console.error('Error loading data:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'No se pudieron cargar las blusas. Mostrando datos de ejemplo.',
+        icon: 'error',
+        confirmButtonText: 'Entendido'
+      });
+      loadMockData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función para mapear productos a categorías de blusas
+  const mapProductToBlusaCategory = (product) => {
+    const nombre = product.nombre?.toLowerCase() || '';
+    const descripcion = product.descripcion?.toLowerCase() || '';
+    const categoria = product.categoria_nombre?.toLowerCase() || '';
+
+    // PRIMERO verificar si la categoría de la API ya nos da una pista
+    if (categoria.includes('formal') || categoria.includes('ejecutiva') || categoria.includes('oficina')) {
+      return 'formales';
+    }
+    if (categoria.includes('casual') || categoria.includes('diario') || categoria.includes('informal')) {
+      return 'casuales';
+    }
+    if (categoria.includes('elegante') || categoria.includes('noche') || categoria.includes('fiesta')) {
+      return 'elegantes';
+    }
+    if (categoria.includes('verano') || categoria.includes('lino') || categoria.includes('fresca') || categoria.includes('sandalias')) {
+      return 'verano';
+    }
+    if (categoria.includes('encaje') || categoria.includes('lace') || categoria.includes('transparente')) {
+      return 'encaje';
+    }
+    if (categoria.includes('seda') || categoria.includes('silk') || categoria.includes('satén')) {
+      return 'seda';
+    }
+    if (categoria.includes('manga') || categoria.includes('sleeve') || categoria.includes('larga') || categoria.includes('corta')) {
+      return 'mangas';
+    }
+
+    // LUEGO buscar en nombre y descripción
+    if (nombre.includes('formal') || descripcion.includes('formal') || descripcion.includes('oficina') || descripcion.includes('ejecutiv')) {
+      return 'formales';
+    } else if (nombre.includes('casual') || descripcion.includes('casual') || descripcion.includes('diario') || descripcion.includes('informal')) {
+      return 'casuales';
+    } else if (nombre.includes('elegante') || descripcion.includes('elegante') || descripcion.includes('fiesta') || descripcion.includes('noche')) {
+      return 'elegantes';
+    } else if (nombre.includes('verano') || descripcion.includes('verano') || descripcion.includes('lino') || descripcion.includes('fresca')) {
+      return 'verano';
+    } else if (nombre.includes('encaje') || descripcion.includes('encaje') || descripcion.includes('lace')) {
+      return 'encaje';
+    } else if (nombre.includes('seda') || descripcion.includes('seda') || descripcion.includes('silk')) {
+      return 'seda';
+    } else if (nombre.includes('manga') || descripcion.includes('manga')) {
+      return 'mangas';
+    }
+    
+    // Si la categoría es simplemente "Blusas", asignar a "casuales" por defecto
+    if (categoria.includes('blusa')) {
+      return 'casuales';
+    }
+    
+    return 'casuales'; // Categoría por defecto
+  };
+
+  // Función para cargar datos mock
+  const loadMockData = () => {
+    const mockProducts = [
+      {
+        id: 1,
+        nombre: "Blusa Elegante de Seda",
+        descripcion: "Blusa de seda natural con corte elegante para ocasiones especiales",
+        precio: 65.99,
+        imagen_url: "https://via.placeholder.com/300x300/EC4899/FFFFFF?text=Blusa+Elegante",
+        stock: 8,
+        genero: "mujer",
+        categoria_nombre: "blusas elegantes",
+        rating: 4.7,
+        creado_en: new Date().toISOString(),
+        tallas: ['XS', 'S', 'M', 'L'],
+        colores: ['Blanco', 'Negro', 'Rosa', 'Azul claro']
+      },
+      {
+        id: 2,
+        nombre: "Blusa Casual de Algodón",
+        descripcion: "Blusa cómoda de algodón para uso diario, perfecta para looks casuales",
+        precio: 35.99,
+        imagen_url: "https://via.placeholder.com/300x300/8B5CF6/FFFFFF?text=Blusa+Casual",
+        stock: 12,
+        genero: "mujer",
+        categoria_nombre: "blusas casuales",
+        rating: 4.3,
+        creado_en: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        tallas: ['S', 'M', 'L', 'XL'],
+        colores: ['Blanco', 'Beige', 'Verde menta', 'Azul']
+      },
+      {
+        id: 3,
+        nombre: "Blusa Formal para Oficina",
+        descripcion: "Blusa formal con detalles sofisticados ideal para el entorno laboral",
+        precio: 49.99,
+        imagen_url: "https://via.placeholder.com/300x300/374151/FFFFFF?text=Blusa+Formal",
+        stock: 6,
+        genero: "mujer",
+        categoria_nombre: "blusas formales",
+        rating: 4.6,
+        creado_en: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        tallas: ['XS', 'S', 'M'],
+        colores: ['Blanco', 'Azul marino', 'Gris', 'Negro']
+      },
+      {
+        id: 4,
+        nombre: "Blusa de Encaje Veraniega",
+        descripcion: "Blusa ligera de encaje perfecta para los días cálidos de verano",
+        precio: 42.99,
+        imagen_url: "https://via.placeholder.com/300x300/F59E0B/FFFFFF?text=Blusa+Verano",
+        stock: 10,
+        genero: "mujer",
+        categoria_nombre: "blusas de verano",
+        rating: 4.4,
+        creado_en: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        tallas: ['S', 'M', 'L'],
+        colores: ['Blanco', 'Crudo', 'Azul cielo', 'Rosa palo']
+      }
+    ];
+    
+    setProducts(mockProducts);
+    setFilteredProducts(mockProducts);
+    updateCategoriesCount(mockProducts);
+  };
+
+  // Actualizar contadores de categorías usando estado
+  const updateCategoriesCount = (productsList) => {
+    const updatedCategories = initialBlusasCategories.map(category => {
+      if (category.id === 'todos') {
+        return { ...category, count: productsList.length };
+      }
+      
+      const count = productsList.filter(product => 
+        mapProductToBlusaCategory(product) === category.id
+      ).length;
+      
+      return { ...category, count };
+    });
+    
+    setCategories(updatedCategories);
+  };
 
   // Función handleSearch con filtrado manual
   const handleSearch = (e) => {
@@ -721,35 +771,29 @@ export default function Hombre() {
   };
 
   // Función auxiliar para obtener colores HEX
-  const getColorHex = (colorName) => {
+  const getColorHex = (color) => {
     const colorMap = {
-      'Blanco': '#ffffff',
+      'Blanco': '#FFFFFF',
       'Negro': '#000000',
-      'Azul': '#3b82f6',
-      'Gris': '#6b7280',
-      'Azul oscuro': '#1e40af',
-      'Azul marino': '#1e3a8a',
-      'Verde': '#10b981',
-      'Marrón': '#92400e',
-      'Burdeos': '#831843',
-      'Azul real': '#1d4ed8',
-      'Rosa palo': '#fecdd3',
-      'Azul claro': '#93c5fd',
-      'Gris oscuro': '#374151'
+      'Azul': '#3B82F6',
+      'Gris': '#6B7280',
+      'Azul claro': '#93C5FD',
+      'Rosa palo': '#FBCFE8',
+      'Azul marino': '#1E3A8A',
+      'Verde menta': '#84CC16',
+      'Beige': '#FEF3C7',
+      'Gris oscuro': '#374151',
+      'Rosa': '#EC4899',
+      'Blanco natural': '#F9FAFB',
+      'Crudo': '#F3F4F6',
+      'Azul cielo': '#0EA5E9',
+      'Verde': '#10B981',
+      'Lila': '#8B5CF6',
+      'Amarillo': '#F59E0B',
+      'Rojo': '#EF4444'
     };
-    return colorMap[colorName] || '#6b7280';
+    return colorMap[color] || '#6B7280';
   };
-
-  // Función para determinar badge del producto
-  const getProductBadge = (product) => {
-    if (product.stock === 0) return { text: 'Agotado', color: 'linear-gradient(135deg, #ef4444, #dc2626)' };
-    if (product.creado_en && new Date(product.creado_en) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) {
-      return { text: 'Nuevo', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' };
-    }
-    if (product.stock < 5) return { text: 'Últimas unidades', color: 'linear-gradient(135deg, #f59e0b, #d97706)' };
-    return null;
-  };
-
 
   const handleQuickView = (product) => {
      const generateRatingStars = (rating = 4.5) => {
@@ -950,7 +994,7 @@ export default function Hombre() {
                      <label style="font-weight: 700; color: #1e293b; font-size: 16px;">Selecciona tu talla:</label>
                    </div>
                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
-                     ${(product.tallas || ['S', 'M', 'L', 'XL']).map((talla, index) => `
+                     ${(product.tallas || ['XS', 'S', 'M', 'L']).map((talla, index) => `
                        <button 
                          type="button"
                          style="padding: 16px 8px; border: 2px solid #e2e8f0; 
@@ -972,7 +1016,7 @@ export default function Hombre() {
                  <div style="margin-bottom: 30px;">
                    <label style="font-weight: 700; color: #1e293b; font-size: 16px; display: block; margin-bottom: 15px;">Color:</label>
                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                     ${(product.colores || ['Blanco', 'Negro', 'Azul']).map((color, index) => `
+                     ${(product.colores || ['Blanco', 'Negro', 'Rosa']).map((color, index) => `
                        <button 
                          type="button"
                          style="padding: 14px 20px; 
@@ -1048,7 +1092,7 @@ export default function Hombre() {
                      </div>
                      <div>
                        <div style="font-weight: 800; color: #92400e; font-size: 16px; margin-bottom: 4px;">Garantía Premium</div>
-                       <div style="color: #b45309; font-size: 14px;">Este pantalón incluye 1 año de garantía y soporte premium</div>
+                       <div style="color: #b45309; font-size: 14px;">Esta blusa incluye 1 año de garantía y soporte premium</div>
                      </div>
                    </div>
                  </div>
@@ -1093,7 +1137,6 @@ export default function Hombre() {
      });
    };
 
-
   const renderRatingStars = (rating = 4.5) => {
     const stars = [];
     const fullStars = Math.floor(rating);
@@ -1105,244 +1148,196 @@ export default function Hombre() {
         stars.push(<i key={i} className="far fa-star"></i>);
       }
     }
-    return <span className={styles.ratingStars}>{stars}</span>;
+    return <span className="art-rating-stars">{stars}</span>;
   };
 
   if (loading) {
     return (
-      <div className={styles.hombreContainer}>
+      <div className="art-hombre">
         <Header />
-        <div className={styles.loading}>
-          <i className="fas fa-spinner fa-spin" style={{marginRight: '10px'}}></i>
-          Cargando productos para hombre...
+        <div className="art-loading">
+          <i className="fas fa-spinner fa-spin me-2"></i>
+          Cargando blusas para mujer...
         </div>
       </div>
     );
   }
 
   return (
-    <div className={styles.hombreContainer}>
+    <div className="art-hombre">
       <Header />
 
-      {/* HERO SECTION */}
-      <section className={styles.heroSection}>
-        <h1 className={styles.heroTitle}>COLECCIÓN HOMBRE</h1>
-        <p className={styles.heroSubtitle}>
-          Descubre nuestra exclusiva selección de moda masculina. 
-          Desde looks casuales hasta elegancia formal, encuentra tu estilo perfecto.
-        </p>
-        
-        <div className={styles.heroStats}>
-          <div className={styles.statItem}>
-            <span className={styles.statNumber}>{products.length}+</span>
-            <span className={styles.statLabel}>Productos</span>
+      {/* SECCIÓN DE BLUSAS */}
+      <section className="art-featured-products">
+        <div className="container">
+          <div className="art-section-title">
+            <h2>Blusas para Mujer</h2>
+            <p className="art-subtitle">
+              Descubre nuestra exclusiva colección de blusas femeninas para cada ocasión
+            </p>
           </div>
-          <div className={styles.statItem}>
-            <span className={styles.statNumber}>4.8</span>
-            <span className={styles.statLabel}>Rating Promedio</span>
-          </div>
-          <div className={styles.statItem}>
-            <span className={styles.statNumber}>98%</span>
-            <span className={styles.statLabel}>Clientes Satisfechos</span>
-          </div>
-        </div>
-      </section>
 
-      {/* FILTERS BAR */}
-      <section className={styles.filtersBar}>
-        <div className={styles.filtersContainer}>
-          <form onSubmit={handleSearch} className={styles.searchBox}>
-            <input
-              type="text"
-              className={styles.searchInput}
-              placeholder="Buscar en moda masculina..."
-              value={searchTerm}
-              onChange={handleInputChange}
-            />
-            <button type="submit" className={styles.searchButton}>
-              <i className="fas fa-search"></i>
-            </button>
-            {searchTerm && (
-              <button 
-                type="button"
-                className={styles.clearButton}
-                onClick={handleClearSearch}
-                title="Limpiar búsqueda"
-              >
-                <i className="fas fa-times"></i>
+          {/* BARRA DE BÚSQUEDA MEJORADA */}
+          <div className="art-search-container">
+            <form onSubmit={handleSearch} className="art-search-box">
+              <input
+                type="text"
+                className="art-search-input"
+                placeholder="Buscar blusas por nombre, descripción..."
+                value={searchTerm}
+                onChange={handleInputChange}
+              />
+              <button type="submit" className="art-search-button">
+                <i className="fas fa-search"></i>
               </button>
-            )}
-          </form>
-
-          <div className={styles.filterControls}>
-            <select 
-              className={styles.sortSelect}
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="aleatorio">Ordenar por: Aleatorio</option>
-              <option value="popularidad">Popularidad</option>
-              <option value="precio_asc">Precio: Menor a Mayor</option>
-              <option value="precio_desc">Precio: Mayor a Menor</option>
-              <option value="nuevo">Más Nuevos</option>
-              <option value="valoracion">Mejor Valorados</option>
-            </select>
-
-            <div className={styles.viewToggle}>
-              <button 
-                className={`${styles.viewButton} ${viewMode === 'grid' ? styles.active : ''}`}
-                onClick={() => setViewMode('grid')}
-              >
-                <i className="fas fa-th"></i>
-              </button>
-              <button 
-                className={`${styles.viewButton} ${viewMode === 'list' ? styles.active : ''}`}
-                onClick={() => setViewMode('list')}
-              >
-                <i className="fas fa-list"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* PRODUCTS SECTION */}
-      <section className={styles.productsSection}>
-        <div className={styles.productsHeader}>
-          <div className={styles.resultsCount}>
-            {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''} encontrado{filteredProducts.length !== 1 ? 's' : ''} para hombre
-            {searchTerm && (
-              <span className={styles.searchFilter}>
-                para "{searchTerm}"
-              </span>
-            )}
-          </div>
-        </div>
-
-        {filteredProducts.length === 0 ? (
-          <div className={styles.noProducts}>
-            <div className={styles.noProductsIcon}>
-              <i className="fas fa-search"></i>
-            </div>
-            <h3>No se encontraron productos</h3>
-            <p>Intenta con otros términos de búsqueda o ajusta los filtros</p>
-            {searchTerm && (
-              <button 
-                className={styles.clearSearchBtn}
-                onClick={handleClearSearch}
-              >
-                Limpiar búsqueda
-              </button>
-            )}
-          </div>
-        ) : (
-          <>
-            <div className={viewMode === 'grid' ? styles.productsGrid : styles.productsList}>
-              {currentProducts.map((product) => {
-                const badgeInfo = getProductBadge(product);
-                const isFavorite = isProductFavorite(product.id);
-                
-                return (
-                  <div key={product.id} className={styles.productCard}>
-                    {badgeInfo && (
-                      <div 
-                        className={styles.productBadge}
-                        style={{background: badgeInfo.color}}
-                      >
-                        {badgeInfo.text}
-                      </div>
-                    )}
-                    
-                    <div className={styles.productImage}>
-                      <img
-                        src={product.imagen_url}
-                        alt={product.nombre}
-                        onError={(e) => {
-                          e.target.src = 'https://via.placeholder.com/300x300/f8fafc/94a3b8?text=Imagen+No+Disponible';
-                        }}
-                      />
-                      <div className={styles.productActions}>
-                        <button 
-                          className={styles.actionButton}
-                          onClick={() => handleQuickView(product)}
-                        >
-                          <i className="fas fa-eye"></i>
-                        </button>
-                        <button 
-                          className={`${styles.actionButton} ${isFavorite ? styles.favorited : ''}`}
-                          onClick={() => handleToggleFavorite(product.id)}
-                          title={isFavorite ? "Remover de favoritos" : "Añadir a favoritos"}
-                        >
-                          <i className={`fas fa-heart ${isFavorite ? styles.active : ''}`}></i>
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className={styles.productInfo}>
-                      <h3 className={styles.productTitle}>{product.nombre}</h3>
-                      <p className={styles.productDescription}>{product.descripcion}</p>
-                      
-                      <div className={styles.productCategory}>
-                        {product.categoria_nombre}
-                      </div>
-                      
-                      <div className={styles.productRating}>
-                        <span className={styles.ratingStars}>
-                          {renderRatingStars(product.rating || 4.5)}
-                        </span>
-                        <span className={styles.ratingCount}>({product.rating || 4.5})</span>
-                      </div>
-                      
-                      <div className={styles.productPrice}>
-                        <div className={styles.priceContainer}>
-                          <span className={styles.currentPrice}>${product.precio}</span>
-                        </div>
-                        <button 
-                          className={styles.addToCartButton}
-                          onClick={() => handleAddToCart(product.id)}
-                          disabled={product.stock === 0}
-                        >
-                          <i className="fas fa-shopping-cart"></i>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* PAGINATION */}
-            {totalPages > 1 && (
-              <div className={styles.pagination}>
+              {searchTerm && (
                 <button 
-                  className={styles.paginationButton}
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
+                  type="button"
+                  className="art-clear-button"
+                  onClick={handleClearSearch}
+                  title="Limpiar búsqueda"
                 >
-                  <i className="fas fa-chevron-left"></i>
+                  <i className="fas fa-times"></i>
                 </button>
-                
-                {[...Array(totalPages)].map((_, index) => (
-                  <button
-                    key={index + 1}
-                    className={`${styles.paginationButton} ${currentPage === index + 1 ? styles.active : ''}`}
-                    onClick={() => setCurrentPage(index + 1)}
+              )}
+            </form>
+          </div>
+
+          <div className="art-main-layout">
+            {/* SIDEBAR DE CATEGORÍAS DE BLUSAS */}
+            <aside className="art-categories-sidebar">
+              <h3 className="art-categories-title">Tipos de Blusas</h3>
+              <ul className="art-category-list">
+                {categories.map(category => (
+                  <li
+                    key={category.id}
+                    className={`art-category-item ${selectedCategory === category.id ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory(category.id)}
                   >
-                    {index + 1}
-                  </button>
+                    <span>{category.name}</span>
+                    <span className="art-category-count">({category.count})</span>
+                  </li>
                 ))}
-                
-                <button 
-                  className={styles.paginationButton}
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
+              </ul>
+            </aside>
+
+            {/* SECCIÓN DE PRODUCTOS */}
+            <main className="art-products-section">
+              <div className="art-products-header">
+                <div className="art-products-count">
+                  {filteredProducts.length} blusa{filteredProducts.length !== 1 ? 's' : ''} encontrada{filteredProducts.length !== 1 ? 's' : ''}
+                  {selectedCategory !== 'todos' && (
+                    <span className="art-category-filter">
+                      en {categories.find(cat => cat.id === selectedCategory)?.name}
+                    </span>
+                  )}
+                  {searchTerm && (
+                    <span className="art-search-filter">
+                      para "{searchTerm}"
+                    </span>
+                  )}
+                </div>
+                <select 
+                  className="art-sort-select"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
                 >
-                  <i className="fas fa-chevron-right"></i>
-                </button>
+                  <option value="popularidad">Ordenar por: Popularidad</option>
+                  <option value="precio_asc">Precio: Menor a Mayor</option>
+                  <option value="precio_desc">Precio: Mayor a Menor</option>
+                  <option value="nuevo">Más Nuevos</option>
+                  <option value="valoracion">Mejor Valorados</option>
+                </select>
               </div>
-            )}
-          </>
-        )}
+
+              <div className="art-product-grid">
+                {filteredProducts.length === 0 ? (
+                  <div className="art-no-products">
+                    <i className="fas fa-search fa-3x mb-3" style={{color: '#ddd'}}></i>
+                    <h3>No se encontraron blusas</h3>
+                    <p>Intenta con otros términos de búsqueda o categorías</p>
+                    {searchTerm && (
+                      <button 
+                        className="art-clear-search-btn"
+                        onClick={handleClearSearch}
+                      >
+                        Limpiar búsqueda
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  filteredProducts.map((product) => {
+                    const isFavorite = isProductFavorite(product.id);
+                    
+                    return (
+                      <div key={product.id} className="art-product-card">
+                        {/* Badge dinámico - Agotado tiene prioridad */}
+                        {product.stock === 0 ? (
+                          <div className="art-product-badge agotado">Agotado</div>
+                        ) : product.creado_en && new Date(product.creado_en) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) ? (
+                          <div className="art-product-badge nuevo">Nuevo</div>
+                        ) : null}
+                        
+                        <div className="art-product-image">
+                          <img
+                            src={product.imagen_url}
+                            alt={product.nombre}
+                            onError={(e) => {
+                              e.target.src = 'https://via.placeholder.com/300x300?text=Imagen+No+Disponible';
+                            }}
+                          />
+                          <div className="art-product-actions">
+                            <button 
+                              title="Vista rápida"
+                              onClick={() => handleQuickView(product)}
+                            >
+                              <i className="fas fa-eye"></i>
+                            </button>
+                            <button 
+                              title={isFavorite ? "Remover de favoritos" : "Añadir a favoritos"}
+                              onClick={() => handleToggleFavorite(product.id)}
+                              className={isFavorite ? "favorited" : ""}
+                            >
+                              <i className={`fas fa-heart ${isFavorite ? "active" : ""}`}></i>
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="art-product-info">
+                          <h3>{product.nombre}</h3>
+                          <p>{product.descripcion}</p>
+                          
+                          <div className="art-product-category">
+                            {categories.find(cat => cat.id === mapProductToBlusaCategory(product))?.name}
+                          </div>
+                          
+                          <div className="art-product-rating">
+                            {renderRatingStars()}
+                            <span className="art-rating-count">({product.rating || 4.5})</span>
+                          </div>
+                          
+                          <div className="art-product-price">
+                            <div className="art-price-container">
+                              <span className="art-price">${product.precio}</span>
+                            </div>
+                            <button 
+                              className="art-add-to-cart"
+                              title="Añadir al carrito"
+                              onClick={() => handleAddToCart(product.id)}
+                              disabled={product.stock === 0}
+                            >
+                              <i className="fas fa-shopping-cart"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </main>
+          </div>
+        </div>
       </section>
       <Footer/>
       <FloatingWhatsApp/>
