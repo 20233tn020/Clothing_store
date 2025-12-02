@@ -1,3 +1,5 @@
+// Cambio forzado para que Git lo detecte
+
 import { Routes, Route } from 'react-router-dom'
 import Home from './components/pages/home/home.jsx'
 import LoginForm from './components/Auth/LoginForm/LoginForm.jsx'
