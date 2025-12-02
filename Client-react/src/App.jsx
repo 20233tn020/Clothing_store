@@ -25,6 +25,9 @@ import Hombre from './components/pages/Private/Hombre.jsx'
 import Mujer from './components/pages/Private/Mujer.jsx'
 import Accesorios from './components/pages/Private/Accesorios.jsx'
 import Ofertas from './components/pages/Private/Ofertas.jsx'
+import PantalonHombres from './components/pages/Private/PantalonHombres.jsx'
+import Chaquetas from './components/pages/Private/Chaquetas.jsx'
+import OrderDetails from './components/pages/Private/OrderDetails.jsx'
 export default function App() {
   return (
       <GoogleOAuthProvider clientId="915284224791-053n49a9auhgm7h1q90k3kfso8g52ktb.apps.googleusercontent.com">
@@ -45,16 +48,19 @@ export default function App() {
       <Route path='/UsersManagement' element={<UsersManagement/>}/>
       <Route path='/OrdersManagement' element={<OrdersManagement/>}/>
       <Route path='/ProductManagement' element={<ProductManagement/>}/>
-    <Route path='/ReportAnalyze' element={<ReportAnalyze/>}/>
-    <Route path='/Notifications' element={<Notifications/>}/>
-    <Route path='/Update_Password' element={<Update_Password/>}/>
-    <Route path='/LogoutLink' element={<LogoutLink/>}/>
-    <Route path='/ArtHombre' element={<ArtHombre/>}/>
-    <Route path='/Hombre' element={<Hombre/>}/>
-     <Route path='/Mujer' element={<Mujer/>}/>
-     <Route path='/Accesorios' element={<Accesorios/>}/>
+      <Route path='/ReportAnalyze' element={<ReportAnalyze/>}/>
+      <Route path='/Notifications' element={<Notifications/>}/>
+      <Route path='/Update_Password' element={<Update_Password/>}/>
+      <Route path='/LogoutLink' element={<LogoutLink/>}/>
+      <Route path='/ArtHombre' element={<ArtHombre/>}/>
+      <Route path='/Hombre' element={<Hombre/>}/>
+      <Route path='/Mujer' element={<Mujer/>}/>
+      <Route path='/Accesorios' element={<Accesorios/>}/>
       <Route path='/Ofertas' element={<Ofertas/>}/>
-       <Route path="*" element={<div>Página no encontrada</div>} />
+      <Route path='/PantalonHombres' element={<PantalonHombres/>}/>
+      <Route path='/Chaquetas' element={<Chaquetas/>}/>
+      <Route path="/order-details/:orderId" element={<OrderDetails />} />
+      <Route path="*" element={<div>Página no encontrada</div>} />
     </Routes>
   )
 }

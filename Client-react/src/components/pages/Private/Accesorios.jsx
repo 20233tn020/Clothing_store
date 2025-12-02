@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import styles from './Accesorios.module.css';
 import { Footer } from '../../Layout/footer/Footer';
 import { FloatingWhatsApp } from '../../FloatingWhatsApp/FloatingWhatsApp';
+
 export default function Accesorios() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -15,7 +16,7 @@ export default function Accesorios() {
   const productsPerPage = 12;
 
   // Datos de ejemplo para la sección Accesorios
-  const mockProducts = [
+ const mockProducts = [
     {
       id: 1,
       name: "Reloj Deportivo Inteligente",
@@ -247,13 +248,248 @@ export default function Accesorios() {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    // La búsqueda se maneja automáticamente por el useEffect
+  };
+
+  // Función auxiliar para obtener colores HEX
+  const getColorHex = (colorName) => {
+    const colorMap = {
+      'Negro': '#000000',
+      'Azul': '#3b82f6',
+      'Plateado': '#c0c0c0',
+      'Marrón': '#92400e',
+      'Beige': '#f5f5dc',
+      'Dorado': '#ffd700',
+      'Multicolor': 'linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4)',
+      'Gris': '#6b7280',
+      'Burdeos': '#831843',
+      'Azul marino': '#1e3a8a',
+      'Verde': '#10b981',
+      'Rojo': '#ef4444',
+      'Transparente': 'rgba(255,255,255,0.3)',
+      'Plata': '#c0c0c0'
+    };
+    return colorMap[colorName] || '#6b7280';
   };
 
   const handleQuickView = (product) => {
-    // Usar la función handleQuickView que ya tienes
-    // Aquí iría tu implementación de vista rápida
-    alert(`Vista rápida: ${product.name}`);
+    // Función para generar estrellas de rating
+    const generateRatingStars = (rating) => {
+      let stars = '';
+      const fullStars = Math.floor(rating);
+      const hasHalfStar = rating % 1 !== 0;
+
+      for (let i = 1; i <= 5; i++) {
+        if (i <= fullStars) {
+          stars += '<i class="fas fa-star" style="color: #FFD700; font-size: 14px;"></i>';
+        } else if (i === fullStars + 1 && hasHalfStar) {
+          stars += '<i class="fas fa-star-half-alt" style="color: #FFD700; font-size: 14px;"></i>';
+        } else {
+          stars += '<i class="far fa-star" style="color: #FFD700; font-size: 14px;"></i>';
+        }
+      }
+      return stars;
+    };
+
+    // Función para determinar color del badge
+    const getBadgeColor = (badge) => {
+      const colors = {
+        'Smart': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'Cuero': 'linear-gradient(135deg, #8B4513, #A0522D)',
+        'Clásico': 'linear-gradient(135deg, #6b7280, #374151)',
+        'Reversible': 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+        'Invierno': 'linear-gradient(135deg, #0ea5e9, #0369a1)',
+        'Ajustable': 'linear-gradient(135deg, #10b981, #059669)',
+        'Plata': 'linear-gradient(135deg, #c0c0c0, #a8a8a8)',
+        'Segura': 'linear-gradient(135deg, #ef4444, #dc2626)',
+        'Piel': 'linear-gradient(135deg, #8B4513, #A0522D)',
+        'Automático': 'linear-gradient(135deg, #f59e0b, #d97706)',
+        'RFID': 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+        'Set': 'linear-gradient(135deg, #ec4899, #db2777)'
+      };
+      return colors[badge] || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    };
+
+    // Calcular ahorro
+    const savings = product.oldPrice ? Math.round((1 - product.price/product.oldPrice) * 100) : 0;
+
+    Swal.fire({
+      title: '',
+      html: `
+        <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 20px; overflow: hidden;">
+          
+          <!-- HEADER -->
+          <div style="background: white; padding: 25px 30px 0; border-bottom: 1px solid #e0f2fe;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+              <div style="display: flex; align-items: center; gap: 15px;">
+                ${product.badge ? `
+                  <div style="background: ${getBadgeColor(product.badge)}; color: white; padding: 10px 20px; border-radius: 25px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+                    ${product.badge}
+                  </div>
+                ` : ''}
+                <div style="display: flex; align-items: center; gap: 15px;">
+                  <div style="color: #64748b; font-size: 12px; font-weight: 600; background: #f8fafc; padding: 6px 12px; border-radius: 20px;">
+                    <i class="fas fa-hashtag" style="margin-right: 5px;"></i>SKU: ${String(product.id).padStart(6, '0')}
+                  </div>
+                  <div style="color: #10b981; font-size: 12px; font-weight: 600; background: #ecfdf5; padding: 6px 12px; border-radius: 20px;">
+                    <i class="fas fa-check-circle" style="margin-right: 5px;"></i>Verificado
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding: 0;">
+            <div style="display: grid; grid-template-columns: 350px 1fr; min-height: 450px;">
+              
+              <!-- SIDEBAR DE IMAGEN -->
+              <div style="background: white; padding: 25px; border-right: 1px solid #e0f2fe; position: relative;">
+                
+                <!-- IMAGEN PRINCIPAL -->
+                <div style="position: relative; margin-bottom: 20px;">
+                  <div style="width: 100%; height: 300px; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.1); position: relative;">
+                    <img 
+                      src="${product.image}" 
+                      alt="${product.name}" 
+                      style="width: 100%; height: 100%; object-fit: cover;"
+                      onerror="this.src='https://via.placeholder.com/350x300/f0f9ff/7dd3fc?text=Accesorio+No+Disponible'"
+                    />
+                  </div>
+                  
+                  <!-- BADGE DE STOCK -->
+                  <div style="position: absolute; bottom: 15px; left: 15px;">
+                    <div style="background: ${product.stock > 0 ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #ef4444, #dc2626)'}; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                      <i class="fas ${product.stock > 0 ? 'fa-check' : 'fa-clock'}"></i>
+                      ${product.stock > 0 ? `${product.stock} en stock` : 'Agotado'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CONTENIDO PRINCIPAL -->
+              <div style="background: white; padding: 25px; position: relative;">
+                
+                <!-- NOMBRE Y RATING -->
+                <div style="margin-bottom: 20px;">
+                  <h1 style="font-size: 24px; font-weight: 800; color: #0f172a; line-height: 1.2; margin-bottom: 12px;">
+                    ${product.name}
+                  </h1>
+                  
+                  <div style="display: flex; align-items: center; gap: 12px; padding-bottom: 15px; border-bottom: 1px solid #e0f2fe;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      ${generateRatingStars(product.rating)}
+                      <span style="color: #475569; font-size: 14px; font-weight: 600; margin-left: 8px;">${product.rating}/5</span>
+                    </div>
+                    <div style="color: #0ea5e9; font-size: 13px; font-weight: 600;">
+                      36 reseñas verificadas
+                    </div>
+                  </div>
+                </div>
+
+                <!-- PRECIO Y DESCUENTO -->
+                <div style="margin-bottom: 20px;">
+                  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                    <span style="font-size: 32px; font-weight: 900; color: #0f172a;">$${product.price}</span>
+                    ${product.oldPrice ? `
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 18px; color: #94a3b8; text-decoration: line-through; font-weight: 600;">$${product.oldPrice}</span>
+                        <span style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 800;">
+                          -${savings}% OFF
+                        </span>
+                      </div>
+                    ` : ''}
+                  </div>
+                  ${savings > 0 ? `
+                    <div style="color: #059669; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                      <i class="fas fa-piggy-bank"></i>
+                      Ahorras $${(product.oldPrice - product.price).toFixed(2)}
+                    </div>
+                  ` : ''}
+                </div>
+
+                <!-- DESCRIPCIÓN -->
+                <div style="margin-bottom: 20px;">
+                  <p style="color: #64748b; line-height: 1.6; font-size: 14px;">
+                    ${product.description}
+                  </p>
+                </div>
+
+                <!-- SELECTOR DE COLOR -->
+                <div style="margin-bottom: 20px;">
+                  <label style="font-weight: 700; color: #1e293b; font-size: 14px; display: block; margin-bottom: 10px;">Color:</label>
+                  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    ${product.colors.map((color, index) => `
+                      <button 
+                        type="button"
+                        style="padding: 10px 16px; 
+                               border: 2px solid #e2e8f0; 
+                               background: white; 
+                               color: #475569; 
+                               border-radius: 10px; 
+                               font-weight: 600;
+                               font-size: 13px;
+                               cursor: pointer;
+                               display: flex;
+                               align-items: center;
+                               gap: 8px;
+                               transition: all 0.2s ease;"
+                        onmouseover="this.style.borderColor='#0ea5e9'; this.style.color='#0ea5e9'"
+                        onmouseout="this.style.borderColor='#e2e8f0'; this.style.color='#475569'"
+                      >
+                        <div style="width: 16px; height: 16px; border-radius: 50%; background: ${getColorHex(color)}; border: 2px solid #e2e8f0;"></div>
+                        ${color}
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+
+                <!-- BOTÓN DE ACCIÓN -->
+                <div style="display: flex; gap: 12px; align-items: center;">
+                  <button 
+                    style="height: 48px; 
+                           flex: 1;
+                           background: ${product.stock > 0 ? 'linear-gradient(135deg, #0ea5e9, #0369a1)' : '#94a3b8'}; 
+                           color: white; 
+                           border: none; 
+                           border-radius: 12px; 
+                           font-weight: 700; 
+                           font-size: 15px;
+                           cursor: ${product.stock > 0 ? 'pointer' : 'not-allowed'};
+                           display: flex;
+                           align-items: center;
+                           justify-content: center;
+                           gap: 10px;
+                           transition: all 0.2s ease;"
+                    onmouseover="this.style.transform='translateY(-2px)'"
+                    onmouseout="this.style.transform='translateY(0)'"
+                  >
+                    <i class="fas fa-shopping-cart"></i>
+                    ${product.stock > 0 ? 'Agregar al Carrito' : 'Producto Agotado'}
+                  </button>
+                </div>
+
+                <!-- GARANTÍA -->
+                <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 15px; margin-top: 20px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: #0ea5e9; display: flex; align-items: center; justify-content: center;">
+                      <i class="fas fa-shield-alt" style="color: white; font-size: 14px;"></i>
+                    </div>
+                    <div>
+                      <div style="font-weight: 700; color: #0369a1; font-size: 14px;">Garantía Premium Accesorios</div>
+                      <div style="color: #0ea5e9; font-size: 12px;">30 días para devolución • 1 año de garantía</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
+      width: 800,
+      showCloseButton: true,
+      showConfirmButton: false,
+      showCancelButton: false,
+      focusConfirm: false
+    });
   };
 
   const handleAddToWishlist = (productId) => {
@@ -290,11 +526,11 @@ export default function Accesorios() {
 
     for (let i = 1; i <= 5; i++) {
       if (i <= fullStars) {
-        stars.push(<i key={i} className="fas fa-star"></i>);
+        stars.push(<i key={i} className="fas fa-star" style={{color: '#FFD700'}}></i>);
       } else if (i === fullStars + 1 && hasHalfStar) {
-        stars.push(<i key={i} className="fas fa-star-half-alt"></i>);
+        stars.push(<i key={i} className="fas fa-star-half-alt" style={{color: '#FFD700'}}></i>);
       } else {
-        stars.push(<i key={i} className="far fa-star"></i>);
+        stars.push(<i key={i} className="far fa-star" style={{color: '#FFD700'}}></i>);
       }
     }
     return stars;
@@ -500,8 +736,8 @@ export default function Accesorios() {
           </>
         )}
       </section>
-                  <Footer/>
-                  <FloatingWhatsApp/>
+      <Footer/>
+      <FloatingWhatsApp/>
     </div>
   );
 }

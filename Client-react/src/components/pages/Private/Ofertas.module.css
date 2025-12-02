@@ -479,17 +479,22 @@
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
   border: none;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
+ min-width: 120px;
+    min-height: 40px;
+  border-radius: 30px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+         transition: var(--transition);
+       font-weight: 600;
+        padding: 8px 15px;
   font-size: 1.1rem;
   box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
 }
+
+
+
 
 .addToCartButton:hover {
   background: linear-gradient(135deg, #dc2626, #b91c1c);

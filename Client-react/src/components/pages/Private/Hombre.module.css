@@ -1,3 +1,43 @@
+/* En Hombre.module.css */
+.favorited {
+  color: #ef4444 !important;
+}
+
+.actionButton.favorited {
+  color: #ef4444 !important;
+}
+
+.actionButton.favorited .fa-heart {
+  color: #ef4444 !important;
+}
+
+.actionButton .fa-heart.active {
+  color: #ef4444 !important;
+}
+
+.actionButton:hover .fa-heart {
+  color: #ef4444;
+  transform: scale(1.1);
+  transition: all 0.3s ease;
+}
+
+/* Animación para el corazón */
+@keyframes heartBeat {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.actionButton.favorited .fa-heart {
+  animation: heartBeat 0.5s ease;
+}
+/* Estilos para el botón de favoritos en el modal */
+#favorite-btn:hover {
+  background: #fef2f2 !important;
+  border-color: #ef4444 !important;
+}
+
+
 /* Hombre.module.css */
 .hombreContainer {
   min-height: 100vh;
@@ -7,7 +47,7 @@
 
 /* HERO SECTION */
 .heroSection {
-  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%)  !important;
   color: white;
   padding: 80px 5%;
   text-align: center;
@@ -354,17 +394,22 @@
   background: linear-gradient(135deg, #10b981, #059669);
   color: white;
   border: none;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
+  border-radius: 30px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
   font-size: 1.1rem;
+  padding: 8px 15px;
   box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+   transition: var(--transition);
+       font-weight: 600;
+ min-width: 120px;
+    min-height: 40px;
 }
+
+   
 
 .addToCartButton:hover {
   background: linear-gradient(135deg, #059669, #047857);

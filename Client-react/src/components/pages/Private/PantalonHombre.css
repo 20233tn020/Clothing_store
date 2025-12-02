@@ -19,57 +19,7 @@
   border-color: #ef4444 !important;
 }
 
-
-
-.art-product-badge.agotado {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: white;
-}
-
-.art-product-badge.nuevo {
-  background: var(--primary);
-  color: white;
-}
-
-/* Versión minimalista */
-.art-clear-button {
-  position: absolute;
-  right: 60px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: #6c757d;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 8px;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-  z-index: 2;
-}
-
-.art-clear-button:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: #dc3545;
-}
-
-.art-clear-search-btn {
-  background: #6c757d;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: 15px;
-  font-size: 14px;
-}
-
-.art-clear-search-btn:hover {
-  background: #5a6268;
-}
-
-/* ArtHombre.css */
+/* PantalonHombres.css */
 .art-hombre {
   min-height: 100vh;
   background: #f8f9fa;
@@ -174,7 +124,7 @@
   font-size: 1.4rem;
   margin-bottom: 20px;
   color: #333;
-  border-bottom: 2px solid #007bff;
+  border-bottom: 2px solid var(--primary);
   padding-bottom: 10px;
 }
 
@@ -236,18 +186,18 @@
 
 .art-price-inputs {
   display: flex;
-  flex-direction: column; /* Cambia de row a column */
+  flex-direction: column;
   gap: 10px;
   margin-bottom: 15px;
 }
 
 .art-price-input {
-  width: 100%; /* Ocupa todo el ancho disponible */
+  width: 100%;
   padding: 10px 12px;
   border: 1px solid #ddd;
   border-radius: 5px;
   font-size: 14px;
-  box-sizing: border-box; /* Incluye padding en el width */
+  box-sizing: border-box;
 }
 
 .art-apply-price {
@@ -396,7 +346,7 @@
 }
 
 .art-product-card:hover .art-product-info h3 {
-  color:var(--primary);
+  color: var(--primary);
 }
 
 .art-product-info p {
@@ -452,23 +402,22 @@
 }
 
 .art-add-to-cart {
-    background: var(--secondary);
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 30px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transition);
-    font-weight: 600;
-    gap: 5px;
-    font-size: 14px;
-    min-width: 120px;
-    min-height: 40px;
+  background: var(--secondary);
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  font-weight: 600;
+  gap: 5px;
+  font-size: 14px;
+  min-width: 120px;
+  min-height: 40px;
 }
-
 
 .art-add-to-cart:hover {
   background: var(--primary);
@@ -495,6 +444,36 @@
   padding: 50px;
   color: #666;
   grid-column: 1 / -1;
+}
+
+/* PAGINATION */
+.art-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 3rem;
+}
+
+.art-pagination-button {
+  padding: 12px 18px;
+  border: 2px solid #e2e8f0;
+  background: white;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.art-pagination-button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.art-pagination-button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
 }
 
 /* Responsive */
