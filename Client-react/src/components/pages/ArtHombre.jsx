@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import './ArtHombre.css';
 import { Footer } from '../Layout/footer/Footer';
 import { FloatingWhatsApp } from '../FloatingWhatsApp/FloatingWhatsApp';
+import { useNavigate } from 'react-router-dom';
 
 // Servicio para manejar las llamadas a la API
 const apiService = {
@@ -209,6 +210,9 @@ export default function ArtHombre() {
   const [sortBy, setSortBy] = useState('popularidad');
   const [categories, setCategories] = useState([]);
   const [applySearch, setApplySearch] = useState(false);
+
+    const navigate = useNavigate();
+
   
   // ESTADOS PARA FAVORITOS
   const [favorites, setFavorites] = useState([]);
@@ -239,13 +243,13 @@ export default function ArtHombre() {
       if (userData) {
         try {
           const user = JSON.parse(userData);
-          console.log('✅ User parsed:', user);
+          console.log(' User parsed:', user);
           setCurrentUserId(user.id);
         } catch (error) {
-          console.error('❌ Error parsing user data:', error);
+          console.error(' Error parsing user data:', error);
         }
       } else {
-        console.warn('⚠️ No hay usuario logueado en localStorage');
+        console.warn(' No hay usuario logueado en localStorage');
       }
     };
     
@@ -254,45 +258,45 @@ export default function ArtHombre() {
 
   // useEffect principal - AHORA DEPENDE DE currentUserId
   useEffect(() => {
-    console.log('🎯 Main useEffect running, currentUserId:', currentUserId);
+    console.log(' Main useEffect running, currentUserId:', currentUserId);
     setCategories(initialCamisasCategories);
     loadDataFromAPI();
     
     if (currentUserId) {
-      console.log('👤 Loading favorites and cart for user:', currentUserId);
+      console.log(' Loading favorites and cart for user:', currentUserId);
       loadUserFavorites();
       loadUserCart();
     } else {
-      console.log('⏳ Waiting for user ID to load favorites and cart...');
+      console.log(' Waiting for user ID to load favorites and cart...');
     }
   }, [currentUserId]);
 
   // Cargar favoritos del usuario
   const loadUserFavorites = async () => {
     if (!currentUserId) {
-      console.warn('⏹️ Cannot load favorites: no user ID');
+      console.warn(' Cannot load favorites: no user ID');
       return;
     }
 
     try {
-      console.log('🔄 Loading favorites for user:', currentUserId);
+      console.log(' Loading favorites for user:', currentUserId);
       const favoritesData = await apiService.getFavorites(currentUserId);
       if (favoritesData.status === 'success') {
         const favoriteIds = favoritesData.data.map(fav => fav.producto.id);
-        console.log('✅ Favorites loaded:', favoriteIds);
+        console.log(' Favorites loaded:', favoriteIds);
         setFavorites(favoriteIds);
       } else {
-        console.error('❌ Error in favorites response:', favoritesData);
+        console.error(' Error in favorites response:', favoritesData);
       }
     } catch (error) {
-      console.error('❌ Error loading favorites:', error);
+      console.error(' Error loading favorites:', error);
     }
   };
 
   // Cargar carrito del usuario
   const loadUserCart = async () => {
     if (!currentUserId) {
-      console.warn('⏹️ Cannot load cart: no user ID');
+      console.warn(' Cannot load cart: no user ID');
       return;
     }
 
@@ -435,7 +439,7 @@ export default function ArtHombre() {
         }).then((result) => {
           if (result.isConfirmed) {
             // Redirigir al carrito (puedes implementar esta función)
-            // navigate('/cart');
+            navigate('/Carrito');
             console.log('Ir al carrito...');
           }
         });
@@ -496,7 +500,7 @@ export default function ArtHombre() {
           showConfirmButton: false
         }).then(() => {
           // Redirigir al checkout
-          // navigate('/checkout');
+           //navigate('/Carrito');
           console.log('Ir al checkout...');
         });
       } else {
@@ -828,7 +832,8 @@ export default function ArtHombre() {
                  >
                    <i class="fas fa-heart"></i>
                  </button>
-                 <button style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #e2e8f0; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; color: #64748b;">
+                 <button style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #e2e8f0; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; color: #64748b;"
+                   id= "shareBtnInSwal">
                    <i class="fas fa-share-alt"></i>
                  </button>
                </div>
@@ -1079,12 +1084,20 @@ export default function ArtHombre() {
              Swal.close();
            };
          }
+        // En el handleQuickView, dentro del didOpen:
+        document.getElementById('shareBtnInSwal').addEventListener('click', () => {
+          // Mostrar opciones de compartir directamente
+          showShareOptions(product);
+        });
+
+
 
          const quickBuyBtn = document.getElementById('quick-buy-btn');
          if (quickBuyBtn) {
            quickBuyBtn.onclick = () => {
              handleQuickBuy(product.id);
              Swal.close();
+             navigate('/Pagar');
            };
          }
  
@@ -1101,6 +1114,205 @@ export default function ArtHombre() {
        }
      });
    };
+   
+// Función para mostrar opciones de compartir
+// Función para mostrar opciones de compartir
+const showShareOptions = (product) => {
+  // Construir la URL del producto (deberías tener una ruta real para productos)
+  const productUrl = `${window.location.origin}/articulo/${product.id}`;
+  const productTitle = product.nombre;
+  const productDescription = product.descripcion || 'Mira esta camisa exclusiva';
+
+  Swal.fire({
+    title: 'Compartir Artículo',
+    html: `
+      <div style="text-align: center; padding: 20px;">
+        <div style="margin-bottom: 25px;">
+          <img src="${product.imagen_url}" 
+               alt="${productTitle}" 
+               style="width: 100px; height: 100px; object-fit: cover; border-radius: 10px; margin-bottom: 15px; border: 2px solid #f1f5f9;">
+          <h4 style="margin: 10px 0 5px 0; color: #1e293b; font-size: 16px;">${productTitle}</h4>
+          <p style="color: #64748b; font-size: 13px; margin: 0;">$${product.precio}</p>
+        </div>
+        
+        <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 25px;">
+          <!-- Botón para compartir en WhatsApp -->
+          <button 
+            id="share-whatsapp" 
+            style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #25D366, #128C7E); border: none; color: white; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);"
+            title="Compartir en WhatsApp"
+          >
+            <i class="fab fa-whatsapp"></i>
+          </button>
+          
+          <!-- Botón para compartir en Facebook -->
+          <button 
+            id="share-facebook" 
+            style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #4267B2, #365899); border: none; color: white; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 15px rgba(66, 103, 178, 0.3);"
+            title="Compartir en Facebook"
+          >
+            <i class="fab fa-facebook-f"></i>
+          </button>
+          
+          <!-- Botón para compartir en Twitter -->
+          <button 
+            id="share-twitter" 
+            style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #1DA1F2, #1A91DA); border: none; color: white; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 15px rgba(29, 161, 242, 0.3);"
+            title="Compartir en Twitter"
+          >
+            <i class="fab fa-twitter"></i>
+          </button>
+          
+          <!-- Botón para copiar enlace -->
+          <button 
+            id="share-copy" 
+            style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #8B5CF6, #7C3AED); border: none; color: white; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);"
+            title="Copiar enlace"
+          >
+            <i class="fas fa-copy"></i>
+          </button>
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <input 
+            type="text" 
+            id="share-link-input" 
+            value="${productUrl}" 
+            readonly 
+            style="flex: 1; padding: 12px 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; background: #f8fafc; color: #475569;"
+          />
+          <button 
+            id="copy-link-btn" 
+            style="padding: 12px 20px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;"
+          >
+            Copiar
+          </button>
+        </div>
+      </div>
+    `,
+    width: 500,
+    showCloseButton: true,
+    showConfirmButton: false,
+    didOpen: () => {
+      // Función para compartir usando Web Share API si está disponible
+      const nativeShare = async () => {
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: productTitle,
+              text: productDescription,
+              url: productUrl,
+            });
+            Swal.close();
+          } catch (error) {
+            if (error.name !== 'AbortError') {
+              console.error('Error al compartir:', error);
+            }
+          }
+        }
+      };
+
+      // Intentar usar Web Share API primero
+      if (navigator.share) {
+        nativeShare();
+      }
+
+      // WhatsApp
+      document.getElementById('share-whatsapp').addEventListener('click', () => {
+        const text = `*${productTitle}*%0A%0A${productDescription}%0A%0A${productUrl}`;
+        window.open(`https://wa.me/?text=${text}`, '_blank');
+        Swal.close();
+      });
+
+      // Facebook
+      document.getElementById('share-facebook').addEventListener('click', () => {
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}&quote=${encodeURIComponent(productTitle)}`, '_blank', 'width=600,height=400');
+        Swal.close();
+      });
+
+      // Twitter
+      document.getElementById('share-twitter').addEventListener('click', () => {
+        const text = `${productTitle} - ${productDescription}`;
+        window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(productUrl)}&text=${encodeURIComponent(text)}`, '_blank', 'width=600,height=400');
+        Swal.close();
+      });
+
+      // Copiar enlace
+      const copyLinkBtn = document.getElementById('copy-link-btn');
+      const shareLinkInput = document.getElementById('share-link-input');
+      
+      copyLinkBtn.addEventListener('click', () => {
+        shareLinkInput.select();
+        shareLinkInput.setSelectionRange(0, 99999); // Para móviles
+        
+        navigator.clipboard.writeText(productUrl).then(() => {
+          const originalText = copyLinkBtn.textContent;
+          copyLinkBtn.innerHTML = '<i class="fas fa-check"></i> Copiado';
+          copyLinkBtn.style.background = '#10b981';
+          
+          setTimeout(() => {
+            copyLinkBtn.textContent = originalText;
+            copyLinkBtn.style.background = '#3b82f6';
+          }, 2000);
+        }).catch(err => {
+          console.error('Error al copiar:', err);
+          Swal.fire('Error', 'No se pudo copiar el enlace', 'error');
+        });
+      });
+
+      // También el botón circular de copiar
+      document.getElementById('share-copy').addEventListener('click', () => {
+        navigator.clipboard.writeText(productUrl).then(() => {
+          Swal.fire({
+            icon: 'success',
+            title: '¡Enlace copiado!',
+            text: 'El enlace ha sido copiado al portapapeles',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        });
+      });
+
+      // Botón de compartir nativo (solo mostrar si está disponible)
+      if (navigator.share) {
+        const shareNativeBtn = document.createElement('button');
+        shareNativeBtn.id = 'share-native';
+        shareNativeBtn.innerHTML = '<i class="fas fa-share-alt"></i> Compartir';
+        shareNativeBtn.style.cssText = `
+          width: 100%;
+          padding: 14px;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          color: white;
+          border: none;
+          border-radius: 10px;
+          font-weight: 600;
+          cursor: pointer;
+          margin-top: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          transition: all 0.3s ease;
+        `;
+        
+        shareNativeBtn.addEventListener('mouseenter', () => {
+          shareNativeBtn.style.transform = 'translateY(-2px)';
+        });
+        shareNativeBtn.addEventListener('mouseleave', () => {
+          shareNativeBtn.style.transform = 'translateY(0)';
+        });
+        
+        shareNativeBtn.addEventListener('click', nativeShare);
+        
+        // Insertar después del input
+        const inputContainer = document.querySelector('div[style*="display: flex; gap: 10px; margin-top: 20px;"]');
+        if (inputContainer) {
+          inputContainer.parentNode.insertBefore(shareNativeBtn, inputContainer.nextSibling);
+        }
+      }
+    }
+  });
+};
 
   const renderRatingStars = (rating = 4.5) => {
     const stars = [];
@@ -1115,6 +1327,10 @@ export default function ArtHombre() {
     }
     return <span className="art-rating-stars">{stars}</span>;
   };
+
+
+  // Función para mostrar opciones de compartir
+
 
   if (loading) {
     return (

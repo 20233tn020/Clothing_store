@@ -68,7 +68,7 @@ await Swal.fire({
           <td><input id="edit-email" value="${user.Email}" class="swal2-input" style="width:90%;"></td>
         </tr>
         <tr>
-          <td>Email</td>
+          <td>Contraseña</td>
           <td>${user.Password || '••••••'}</td>
           <td><input id="edit-Password" value="${user.Password || '••••••'}" class="swal2-input" style="width:90%;"></td>
         </tr>

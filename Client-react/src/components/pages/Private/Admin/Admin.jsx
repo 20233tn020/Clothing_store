@@ -17,20 +17,183 @@ export default function Admin() {
   // Estado de pestaña activa
   const [activeTab, setActiveTab] = useState('dashboard');
   const [userCount, setUserCount] = useState(0);
+  const [orders, setOrders] = useState([]);
+  const [ordersStats, setOrdersStats] = useState({});
+  const [loadingOrders, setLoadingOrders] = useState(false);
+    const [productsStats, setProductsStats] = useState({
+    total_productos: 0,
+    total_stock: 0,
+    categorias: {},
+    generos: {}
+  });
 
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
+
+  // Estados para métodos de pago
+  const [paymentData, setPaymentData] = useState({
+    labels: ["Tarjeta Crédito", "Tarjeta Débito", "PayPal", "Transferencia", "Efectivo"],
+    datasets: [
+      {
+        data: [45, 25, 15, 10, 5],
+        backgroundColor: [
+          "rgba(67, 97, 238, 0.7)",
+          "rgba(76, 201, 240, 0.7)",
+          "rgba(248, 150, 30, 0.7)",
+          "rgba(247, 37, 133, 0.7)",
+          "rgba(72, 149, 239, 0.7)",
+        ],
+      },
+    ],
+  });
+
+    const [paymentStats, setPaymentStats] = useState({
+    metodos_pago: [],
+    totales: { ordenes: 0, monto: 0, metodos: 0 },
+    loading: false
+  });
+
+  // Cargar estadísticas de usuarios
   useEffect(() => {
     axios.get("http://127.0.0.1:5000/UserCount")
       .then(res => setUserCount(res.data.total_usuarios))
       .catch(err => console.error("Error al obtener usuarios:", err));
   }, []);
 
-  // Funciones de acción de ejemplo
-  const viewOrder = (id) => alert(`Ver pedido ${id}`);
-  const editOrder = (id) => alert(`Editar pedido ${id}`);
-  const addOrder = () => alert("Agregar nuevo pedido");
 
 
+    const loadProductsStats = async () => {
+    try {
+      setLoadingProducts(true);
+      const response = await axios.get('http://127.0.0.1:5000/admin/products/count-stats');
+      
+      if (response.data.status === 'success') {
+        setProductsStats(response.data.data);
+      } else {
+        throw new Error(response.data.message);
+      }
+    } catch (error) {
+      console.error('Error loading products stats:', error);
+      setProductsStats({
+        total_productos: 0,
+        total_stock: 0,
+        categorias: {},
+        generos: {}
+      });
+      
+      Swal.fire({
+        title: 'Error',
+        html: `
+          <div style="text-align: center; padding: 15px;">
+            <i class="fa-solid fa-circle-xmark" 
+               style="font-size: 60px; color: #EF4444; margin-bottom: 15px;"></i>
+            <p style="font-size: 16px; color: #000000ff;">
+              No se pudieron cargar las estadísticas de productos.
+            </p>
+          </div>
+        `,
+        color: "#262626ff",
+        confirmButtonColor: "#EF4444",
+        confirmButtonText: "Entendido",
+        width: "420px",
+      });
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
 
+  // Cargar órdenes para el dashboard 5 amas reciente 
+  const loadAdminOrders = async () => {
+    try {
+      setLoadingOrders(true);
+      const response = await axios.get('http://127.0.0.1:5000/admin/orders?per_page=5');
+      
+      if (response.data.status === 'success') {
+        // Tomar solo los primeros 5 pedidos (más recientes)
+        const recentOrders = response.data.data.orders.slice(0, 5);
+        setOrders(recentOrders);
+        setOrdersStats(response.data.data.estadisticas);
+      }
+    } catch (error) {
+      console.error('Error loading admin orders:', error);
+      Swal.fire({
+        title: 'Error',
+        html: `
+          <div style="text-align: center; padding: 15px;">
+            <i class="fa-solid fa-circle-xmark" 
+               style="font-size: 60px; color: #EF4444; margin-bottom: 15px; animation: shake 0.4s ease;"></i>
+            <p style="font-size: 16px; color: #000000ff;">
+              No se pudieron cargar los pedidos.
+            </p>
+          </div>
+        `,
+        color: "#262626ff",
+        confirmButtonColor: "#EF4444",
+        confirmButtonText: "Reintentar",
+        width: "420px",
+        customClass: {
+          popup: "swal2-glass",
+          confirmButton: "swal2-button",
+        },
+        showClass: {
+          popup: "animate__animated animate__shakeX",
+        },
+      });
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+
+  // Cargar estadísticas de órdenes
+  const loadOrdersStats = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:5000/admin/orders/stats');
+      
+      if (response.data.status === 'success') {
+        setOrdersStats(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error loading orders stats:', error);
+    }
+  };
+
+ // Cargar estadísticas de métodos de pago
+  const loadPaymentMethodsStats = async () => {
+    try {
+      setPaymentStats(prev => ({ ...prev, loading: true }));
+      console.log('Cargando estadísticas de métodos de pago...');
+      
+      const response = await axios.get('http://127.0.0.1:5000/admin/orders/payment-methods-detailed');
+      console.log('Respuesta de métodos de pago:', response.data);
+      
+      if (response.data.status === 'success') {
+        const data = response.data.data;
+        setPaymentStats({
+          metodos_pago: data.metodos_pago,
+          totales: data.totales,
+          loading: false
+        });
+        
+        updatePaymentChartData(data.metodos_pago);
+      } else {
+        throw new Error(response.data.message);
+      }
+    } catch (error) {
+      console.error('Error cargando métodos de pago:', error);
+      setPaymentStats(prev => ({ ...prev, loading: false }));
+      
+      Swal.fire({
+        title: 'Error',
+        text: 'No se pudieron cargar las estadísticas de métodos de pago',
+        icon: 'error',
+        confirmButtonText: 'Entendido'
+      });
+    }
+  };
+
+
+  
   const categoryData = {
     labels: ["Electrónicos", "Ropa", "Hogar", "Deportes", "Juguetes"],
     datasets: [
@@ -47,21 +210,212 @@ export default function Admin() {
     ],
   };
 
-  const paymentData = {
-    labels: ["Tarjeta Crédito", "Tarjeta Débito", "PayPal", "Transferencia", "Efectivo"],
-    datasets: [
-      {
-        data: [45, 25, 15, 10, 5],
-        backgroundColor: [
-          "rgba(67, 97, 238, 0.7)",
-          "rgba(76, 201, 240, 0.7)",
-          "rgba(248, 150, 30, 0.7)",
-          "rgba(247, 37, 133, 0.7)",
-          "rgba(72, 149, 239, 0.7)",
-        ],
-      },
-    ],
+
+
+
+  // Actualizar datos del gráfico
+  const updatePaymentChartData = (metodosPago) => {
+    if (!metodosPago || metodosPago.length === 0) return;
+
+    const colors = [
+      "rgba(67, 97, 238, 0.8)",
+      "rgba(76, 201, 240, 0.8)",
+      "rgba(248, 150, 30, 0.8)",
+      "rgba(247, 37, 133, 0.8)",
+      "rgba(72, 149, 239, 0.8)",
+      "rgba(85, 239, 196, 0.8)",
+      "rgba(129, 236, 236, 0.8)",
+      "rgba(116, 185, 255, 0.8)",
+    ];
+
+    const newPaymentData = {
+      labels: metodosPago.map(item => item.metodo),
+      datasets: [
+        {
+          data: metodosPago.map(item => item.cantidad),
+          backgroundColor: metodosPago.map((_, index) => colors[index % colors.length]),
+          borderColor: metodosPago.map((_, index) => colors[index % colors.length].replace('0.8', '1')),
+          borderWidth: 2,
+          hoverBackgroundColor: metodosPago.map((_, index) => colors[index % colors.length].replace('0.8', '1')),
+        },
+      ],
+    };
+
+    setPaymentData(newPaymentData);
   };
+
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    loadAdminOrders();
+    loadOrdersStats();
+    loadProductsStats();
+    loadPaymentMethodsStats();
+  }, []);
+
+   // Función para obtener distribución por género
+  const getGenderDistribution = () => {
+    const { generos } = productsStats;
+    if (Object.keys(generos).length === 0) return 'Cargando...';
+    
+    return Object.entries(generos)
+      .map(([genero, data]) => `${genero}: ${data.count}`)
+      .join(' | ');
+  };
+
+
+
+  // Función para obtener el color del badge según el estado
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case 'Entregado':
+      case 'Completado':
+        return clsx(styles.badge, styles.badgeSuccess);
+      case 'Pendiente':
+      case 'En preparación':
+        return clsx(styles.badge, styles.badgeWarning);
+      case 'Cancelado':
+        return clsx(styles.badge, styles.badgedanger);
+      case 'Enviado':
+      case 'Confirmado':
+        return clsx(styles.badge, styles.badgeInfo);
+      default:
+        return clsx(styles.badge, styles.badgeSecondary);
+    }
+  };
+
+  // Función para formatear fecha
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // Función para ver detalles de la orden
+  const viewOrderDetails = (orderId) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+
+    const productsHtml = order.detalles.map(detalle => `
+      <div style="display: flex; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+        <img src="${detalle.producto_imagen || 'https://via.placeholder.com/50x50?text=Imagen'}" 
+             alt="${detalle.producto_nombre}" 
+             style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; margin-right: 15px;">
+        <div style="flex: 1;">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 5px;">${detalle.producto_nombre}</div>
+          <div style="color: #ccc; font-size: 14px;">
+            Cantidad: ${detalle.cantidad} × $${detalle.precio_unitario}
+          </div>
+          <div style="color: #4ade80; font-weight: 600;">Subtotal: $${detalle.subtotal}</div>
+        </div>
+      </div>
+    `).join('');
+
+    Swal.fire({
+      title: `<h3 style="color: #fff; font-weight: 600; margin-bottom: 20px;">Detalles del Pedido ${order.order_short_id}</h3>`,
+      html: `
+        <div style="text-align: center; padding: 10px;">
+          <div style="background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            
+            <!-- Información del cliente -->
+            <div style="text-align: left; margin-bottom: 20px;">
+              <h4 style="color: #fff; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px;">
+                <i class="fas fa-user" style="margin-right: 8px;"></i>Información del Cliente
+              </h4>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                  <div style="font-size: 12px; color: #9CA3AF;">Nombre</div>
+                  <div style="font-weight: 600; color: #fff;">${order.user_info.nombre_completo}</div>
+                </div>
+                <div>
+                  <div style="font-size: 12px; color: #9CA3AF;">Email</div>
+                  <div style="font-weight: 600; color: #fff;">${order.user_info.email}</div>
+                </div>
+                <div>
+                  <div style="font-size: 12px; color: #9CA3AF;">Teléfono</div>
+                  <div style="font-weight: 600; color: #fff;">${order.user_info.telefono || 'No especificado'}</div>
+                </div>
+                <div>
+                  <div style="font-size: 12px; color: #9CA3AF;">Fecha de registro</div>
+                  <div style="font-weight: 600; color: #fff;">${formatDate(order.user_info.fecha_registro)}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Información del pedido -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+              <div style="text-align: left;">
+                <div style="font-size: 12px; color: #9CA3AF;">Estado</div>
+                <div style="font-weight: 600; color: #fff; text-transform: capitalize;">${order.estado}</div>
+              </div>
+              <div style="text-align: left;">
+                <div style="font-size: 12px; color: #9CA3AF;">Método de pago</div>
+                <div style="font-weight: 600; color: #fff;">${order.metodo_pago || 'No especificado'}</div>
+              </div>
+              <div style="text-align: left;">
+                <div style="font-size: 12px; color: #9CA3AF;">Fecha del pedido</div>
+                <div style="font-weight: 600; color: #fff;">${formatDate(order.creado_en)}</div>
+              </div>
+              <div style="text-align: left;">
+                <div style="font-size: 12px; color: #9CA3AF;">Total productos</div>
+                <div style="font-weight: 600; color: #fff;">${order.resumen.total_productos}</div>
+              </div>
+            </div>
+
+            <!-- Total -->
+            <div style="background: rgba(16, 185, 129, 0.15); padding: 15px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.3);">
+              <div style="font-size: 12px; color: #9CA3AF; margin-bottom: 5px;">Total del pedido</div>
+              <div style="color: #10B981; font-size: 24px; font-weight: 700;">$${order.total}</div>
+            </div>
+          </div>
+
+          <!-- Productos -->
+          <div style="background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <h4 style="color: #fff; font-weight: 600; margin-bottom: 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px;">
+              <i class="fas fa-box" style="margin-right: 8px;"></i>Productos (${order.detalles.length})
+            </h4>
+            ${productsHtml}
+          </div>
+        </div>
+      `,
+      background: "rgba(0, 0, 0, 0.1)",
+      color: "#FFF",
+      width: "700px",
+      padding: "25px",
+      customClass: {
+        popup: 'glass-swal-popup'
+      },
+      showConfirmButton: true,
+      confirmButtonText: "<i class='fas fa-times'></i> Cerrar",
+      confirmButtonColor: "#6366F1",
+      showCloseButton: true,
+      showClass: {
+        popup: "animate__animated animate__fadeInDown",
+      },
+      hideClass: {
+        popup: "animate__animated animate__fadeOutUp",
+      },
+    });
+  };
+
+  useEffect(() => {
+    axios.get("http://127.0.0.1:5000/UserCount")
+      .then(res => setUserCount(res.data.total_usuarios))
+      .catch(err => console.error("Error al obtener usuarios:", err));
+  }, []);
+
+  // Funciones de acción de ejemplo
+  const viewOrder = (id) => alert(`Ver pedido ${id}`);
+  const editOrder = (id) => alert(`Editar pedido ${id}`);
+  const addOrder = () => alert("Agregar nuevo pedido");
+
+
+
+
+
+    
         const regionData = {
             labels: ['Norte', 'Sur', 'Este', 'Oeste', 'Centro'],
             datasets: [{
@@ -218,7 +572,19 @@ export default function Admin() {
   });
 }
 
+  // Componente para mostrar estadísticas de métodos de pago
+  const PaymentMethodsStats = () => {
+    if (paymentStats.loading) {
+      return (
+        <div className={styles.loading}>
+          <i className="fas fa-spinner fa-spin"></i> Cargando métodos de pago...
+        </div>
+      );
+    }}
   return (
+
+
+    
     <div className={styles.container}>
       <title>Panel de Administración - Tienda</title>
 
@@ -288,7 +654,7 @@ export default function Admin() {
                       <i className='fas fa-shopping-cart'></i>
                     </div>
                   </div>
-                  <div className={styles.card_value}>$0</div>
+                  <div className={styles.card_value}>${ordersStats.ventas_totales ? ordersStats.ventas_totales.toLocaleString() : '0'}</div>
                   <div className={styles.card_title}>+12% respecto al mes anterior</div>
                 </div>
                 <div className={styles.card}>
@@ -308,8 +674,26 @@ export default function Admin() {
                       <i className='fas fa-box'></i>
                     </div>
                   </div>
-                  <div className={styles.card_value}>0</div>
-                  <div className={styles.card_title}>+8 productos nuevos</div>
+                  <div className={styles.card_value}>
+                    {loadingProducts ? (
+                      <i className="fas fa-spinner fa-spin"></i>
+                    ) : (
+                      productsStats.total_productos.toLocaleString()
+                    )}
+                  </div>
+                  <div className={styles.card_title}>
+                    {loadingProducts ? (
+                      'Cargando...'
+                    ) : (
+                      <>
+                        Stock: {productsStats.total_stock.toLocaleString()} unidades
+                        <br />
+                        <small style={{fontSize: '12px', opacity: 0.8}}>
+                          {getGenderDistribution()}
+                        </small>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className={styles.card}>
                   <div className={styles.card_header}>
@@ -318,7 +702,7 @@ export default function Admin() {
                       <i className='fas fa-dollar-sign'></i>
                     </div>
                   </div>
-                  <div className={styles.card_value}>$0</div>
+                  <div className={styles.card_value}>${ordersStats.ventas_ultimo_mes ? ordersStats.ventas_ultimo_mes.toLocaleString() : '0'}</div>
                   <div className={styles.card_title}>+15% respecto al mes anterior</div>
                 </div>
               </div>
@@ -343,53 +727,100 @@ export default function Admin() {
               <div className={styles.table_container}>
                 <div className={styles.page_title}>
                   <h2>Pedidos Recientes</h2>
+                  <button 
+                    className={styles.refreshBtn}
+                    onClick={loadAdminOrders}
+                    disabled={loadingOrders}
+                  >
+                    <i className={`fas fa-sync ${loadingOrders ? 'fa-spin' : ''}`}></i>
+                    Actualizar
+                  </button>
                 </div>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID Pedido</th>
-                      <th>Cliente</th>
-                      <th>Fecha</th>
-                      <th>Total</th>
-                      <th>Estado</th>
-                    </tr>
-                  </thead>
-                        <tbody>
-                          <tr>
-                            <td>#ORD-001</td>
-                            <td>María González</td>
-                            <td>15/06/2023</td>
-                            <td>$245.00</td>
-                            <td><span className={clsx(styles.badge, styles.badgeSuccess)}>Completado</span></td>
-                          </tr> 
-                          <tr>
-                            <td>#ORD-002</td>
-                            <td>Carlos López</td>
-                            <td>14/06/2023</td>
-                            <td>$189.50</td>
-                            <td><span className={clsx(styles.badge, styles.badgeWarning)}>Pendiente</span></td>
-
-                          </tr> 
-                              <tr>
-                                  <td>#ORD-003</td>
-                                  <td>Ana Martínez</td>
-                                  <td>13/06/2023</td>
-                                  <td>$320.75</td>
-                                  <td><span className={clsx(styles.badge, styles.badgeSuccess)}>Completado</span></td>
-                              </tr>
-                              <tr>
-                                  <td>#ORD-004</td>
-                                  <td>Javier Rodríguez</td>
-                                  <td>12/06/2023</td>
-                                  <td>$145.00</td>
-                                  <td><span class={clsx(styles.badge, styles.badgedanger)}>Cancelado</span></td>
-    
-                              </tr>
-                        </tbody>
-                </table>
+                
+                {loadingOrders ? (
+                  <div className={styles.loading}>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    Cargando pedidos...
+                  </div>
+                ) : (
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ID Pedido</th>
+                        <th>Cliente</th>
+                        <th>Fecha</th>
+                        <th>Total</th>
+                        <th>Productos</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" style={{textAlign: 'center', padding: '20px'}}>
+                            <i className="fas fa-inbox" style={{fontSize: '48px', color: '#ddd', marginBottom: '10px'}}></i>
+                            <div>No hay pedidos registrados</div>
+                          </td>
+                        </tr>
+                      ) : (
+                        orders.map((order) => (
+                          <tr key={order.id}>
+                            <td>
+                              <strong>{order.order_short_id}</strong>
+                            </td>
+                            <td>
+                              <div>
+                                <strong>{order.user_info.nombre_completo}</strong>
+                                <br />
+                                <small>{order.user_info.email}</small>
+                              </div>
+                            </td>
+                            <td>
+                              {formatDate(order.creado_en)}
+                              <br />
+                              <small>
+                                {new Date(order.creado_en).toLocaleTimeString('es-ES')}
+                              </small>
+                            </td>
+                            <td>
+                              <strong>${order.total}</strong>
+                            </td>
+                            <td>
+                              {order.resumen.total_productos} productos
+                              <br />
+                              <small>{order.resumen.total_items} items</small>
+                            </td>
+                            <td>
+                              <span className={getStatusBadgeClass(order.estado)}>
+                                {order.estado}
+                              </span>
+                            </td>
+                            <td>
+                              <div className={styles.actionButtons}>
+                                <button
+                                  className={styles.btnInfo}
+                                  onClick={() => viewOrderDetails(order.id)}
+                                  title="Ver detalles"
+                                >
+                                  <i className="fas fa-eye"></i>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           )}
+
+
+
+
+
 
           {/* Aquí puedes agregar más pestañas dinámicas */}
           {activeTab === 'users' && <div className={styles.tabContent}>
@@ -458,7 +889,7 @@ export default function Admin() {
         <div className={styles.chart_title}>Métodos de Pago</div>
         <div className={styles.chart}>
           {/* Llamada con gráfico tipo pie */}
-          <ReportAnalyze type="pie" data={paymentData} />
+          <ReportAnalyze  data={paymentData} />
         </div>
       </div>
     </div>

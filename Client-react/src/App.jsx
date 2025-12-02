@@ -28,6 +28,12 @@ import Ofertas from './components/pages/Private/Ofertas.jsx'
 import PantalonHombres from './components/pages/Private/PantalonHombres.jsx'
 import Chaquetas from './components/pages/Private/Chaquetas.jsx'
 import OrderDetails from './components/pages/Private/OrderDetails.jsx'
+import BlusasMujer from './components/pages/Private/BlusasMujer.jsx'
+import ArtMujerVestidos from './components/pages/Private/ArtMujerVestidos.jsx'
+import ArtMujerZapatos from './components/pages/Private/ArtMujerZapatos.jsx'
+import ArtHombreZapatosTenis from './components/pages/Private/ArtHombreZapatosTenis.jsx'
+import AccesoriosRelojes from './components/pages/Private/AccesoriosRelojes.jsx'
+import PantalonDetail from './components/pages/Private/PantalonDetail.jsx'
 export default function App() {
   return (
       <GoogleOAuthProvider clientId="915284224791-053n49a9auhgm7h1q90k3kfso8g52ktb.apps.googleusercontent.com">
@@ -60,6 +66,12 @@ export default function App() {
       <Route path='/PantalonHombres' element={<PantalonHombres/>}/>
       <Route path='/Chaquetas' element={<Chaquetas/>}/>
       <Route path="/order-details/:orderId" element={<OrderDetails />} />
+      <Route path="/BlusasMujer" element={<BlusasMujer />} />
+      <Route path="/ArtMujerVestidos" element={<ArtMujerVestidos />} />
+      <Route path="/ArtMujerZapatos" element={<ArtMujerZapatos />} />
+      <Route path="/ArtHombreZapatosTenis" element={<ArtHombreZapatosTenis />} />
+       <Route path="/AccesoriosRelojes" element={<AccesoriosRelojes />} />
+      <Route path="/PantalonHombres/:id" element={<PantalonDetail />} />
       <Route path="*" element={<div>Página no encontrada</div>} />
     </Routes>
   )

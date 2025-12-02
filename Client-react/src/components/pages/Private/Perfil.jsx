@@ -194,7 +194,53 @@ useEffect(() => {
 const setAsDefault = async (addressId) => {
   if (!user?.id) return;
 
-  if (!window.confirm("¿Establecer esta dirección como principal?")) return;
+  // Obtener la dirección que se va a establecer como principal
+  const addressToSet = addresses.find(a => a.id === addressId);
+  if (!addressToSet) return;
+
+  const result = await Swal.fire({
+    title: "¿Establecer como dirección principal?",
+    html: `
+      <div style="text-align: center; padding: 15px;">
+        <i class="fa-solid fa-home" 
+           style="font-size: 60px; color: #6366F1; margin-bottom: 15px; animation: pop 0.4s ease;"></i>
+        <p style="font-size: 16px; color: #000000ff; margin-bottom: 10px;">
+          ¿Establecer esta dirección como principal?
+        </p>
+        <div style="background: rgba(99, 102, 241, 0.1); padding: 12px; border-radius: 8px; margin-top: 10px;">
+          <p style="font-size: 14px; color: #000000ff; margin: 0; font-weight: 600;">
+            ${addressToSet.tipo || "Dirección"}
+          </p>
+          <p style="font-size: 13px; color: #666; margin: 5px 0 0 0;">
+            ${addressToSet.street}, ${addressToSet.city}
+          </p>
+        </div>
+        <p style="font-size: 14px; color: #666; margin-top: 15px;">
+          Esta será tu dirección de envío predeterminada para futuras compras.
+        </p>
+      </div>
+    `,
+    color: "#262626ff",
+    showCancelButton: true,
+    confirmButtonText: "<i class='fa-solid fa-check'></i> Sí, establecer como principal",
+    cancelButtonText: "<i class='fa-solid fa-times'></i> Cancelar",
+    confirmButtonColor: "#6366F1",
+    cancelButtonColor: "#6B7280",
+    width: "480px",
+    customClass: {
+      popup: "swal2-glass",
+      confirmButton: "swal2-button",
+      cancelButton: "swal2-button"
+    },
+    showClass: {
+      popup: "animate__animated animate__fadeInDown",
+    },
+    hideClass: {
+      popup: "animate__animated animate__fadeOutUp",
+    },
+  });
+
+  if (!result.isConfirmed) return;
 
   try {
     const res = await axios.put(`http://127.0.0.1:5000/address/${addressId}/set_default`, {
@@ -202,23 +248,150 @@ const setAsDefault = async (addressId) => {
     });
 
     if (res.data.status === "success") {
+      // IMPORTANTE: Asegurar que solo UNA dirección sea principal
       const updated = addresses.map((a) => ({
         ...a,
-        isDefault: a.id === addressId,
+        isDefault: a.id === addressId, // Solo será true para la dirección seleccionada
       }));
       setAddresses(updated);
-      alert("Dirección establecida como principal");
+      
+      // Mostrar confirmación de éxito
+      Swal.fire({
+        title: "¡Dirección principal actualizada!",
+        html: `
+          <div style="text-align: center; padding: 15px;">
+            <i class="fa-solid fa-circle-check" 
+               style="font-size: 60px; color: #10B981; margin-bottom: 15px; animation: pop 0.4s ease;"></i>
+            <p style="font-size: 16px; color: #000000ff;">
+              La dirección se ha establecido como principal correctamente.
+            </p>
+            <div style="background: rgba(16, 185, 129, 0.1); padding: 12px; border-radius: 8px; margin-top: 10px;">
+              <p style="font-size: 14px; color: #000000ff; margin: 0; font-weight: 600;">
+                ${addressToSet.tipo || "Dirección"}
+              </p>
+              <p style="font-size: 13px; color: #666; margin: 5px 0 0 0;">
+                ${addressToSet.street}, ${addressToSet.city}
+              </p>
+            </div>
+          </div>
+        `,
+        color: "#262626ff",
+        confirmButtonColor: "#10B981",
+        confirmButtonText: "Entendido",
+        width: "480px",
+        customClass: {
+          popup: "swal2-glass",
+          confirmButton: "swal2-button",
+        },
+        showClass: {
+          popup: "animate__animated animate__fadeInDown",
+        },
+        hideClass: {
+          popup: "animate__animated animate__fadeOutUp",
+        },
+      });
     } else {
-      alert(res.data.message || "No se pudo cambiar la dirección principal");
+      Swal.fire({
+        title: "Error",
+        html: `
+          <div style="text-align: center; padding: 15px;">
+            <i class="fa-solid fa-circle-xmark" 
+               style="font-size: 60px; color: #EF4444; margin-bottom: 15px; animation: shake 0.4s ease;"></i>
+            <p style="font-size: 16px; color: #000000ff;">
+              ${res.data.message || "No se pudo cambiar la dirección principal"}
+            </p>
+          </div>
+        `,
+        color: "#262626ff",
+        confirmButtonColor: "#EF4444",
+        confirmButtonText: "Reintentar",
+        width: "420px",
+        customClass: {
+          popup: "swal2-glass",
+          confirmButton: "swal2-button",
+        },
+        showClass: {
+          popup: "animate__animated animate__shakeX",
+        },
+      });
     }
   } catch (error) {
     console.error("Error al cambiar dirección principal:", error);
+    
+    Swal.fire({
+      title: "Error de conexión",
+      html: `
+        <div style="text-align: center; padding: 15px;">
+          <i class="fa-solid fa-wifi" 
+             style="font-size: 60px; color: #F59E0B; margin-bottom: 15px; animation: shake 0.4s ease;"></i>
+          <p style="font-size: 16px; color: #000000ff;">
+            No se pudo conectar con el servidor. Intenta nuevamente.
+          </p>
+        </div>
+      `,
+      color: "#262626ff",
+      confirmButtonColor: "#F59E0B",
+      confirmButtonText: "Reintentar",
+      width: "420px",
+      customClass: {
+        popup: "swal2-glass",
+        confirmButton: "swal2-button",
+      },
+      showClass: {
+        popup: "animate__animated animate__shakeX",
+      },
+    });
   }
 };
 
-
 const deleteAddress = async (addressId) => {
-  if (!window.confirm("¿Eliminar esta dirección?")) return;
+  const address = addresses.find((a) => a.id === addressId);
+  if (!address) return;
+
+  // Confirmación para eliminar
+  const result = await Swal.fire({
+    title: "¿Eliminar esta dirección?",
+    html: `
+      <div style="text-align: center; padding: 15px;">
+        <i class="fa-solid fa-trash" 
+           style="font-size: 60px; color: #EF4444; margin-bottom: 15px; animation: pop 0.4s ease;"></i>
+        <p style="font-size: 16px; color: #000000ff; margin-bottom: 10px;">
+          ¿Estás seguro de que quieres eliminar esta dirección?
+        </p>
+        <div style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; margin-top: 10px;">
+          <p style="font-size: 14px; color: #000000ff; margin: 0; font-weight: 600;">
+            ${address.tipo || "Dirección"}
+          </p>
+          <p style="font-size: 13px; color: #666; margin: 5px 0 0 0;">
+            ${address.street}, ${address.city}
+          </p>
+        </div>
+        <p style="font-size: 14px; color: #666; margin-top: 15px;">
+          Esta acción no se puede deshacer.
+        </p>
+      </div>
+    `,
+    color: "#262626ff",
+    showCancelButton: true,
+    confirmButtonText: "<i class='fa-solid fa-trash'></i> Sí, eliminar",
+    cancelButtonText: "<i class='fa-solid fa-times'></i> Cancelar",
+    confirmButtonColor: "#EF4444",
+    cancelButtonColor: "#6B7280",
+    width: "480px",
+    customClass: {
+      popup: "swal2-glass",
+      confirmButton: "swal2-button",
+      cancelButton: "swal2-button"
+    },
+    showClass: {
+      popup: "animate__animated animate__fadeInDown",
+    },
+    hideClass: {
+      popup: "animate__animated animate__fadeOutUp",
+    },
+  });
+
+  if (!result.isConfirmed) return;
 
   try {
     const res = await axios.delete(`http://127.0.0.1:5000/address/${addressId}`, {
@@ -227,37 +400,94 @@ const deleteAddress = async (addressId) => {
 
     if (res.data.status === "success") {
       setAddresses((prev) => prev.filter((a) => a.id !== addressId));
+      
+      // Confirmación de eliminación exitosa
       Swal.fire({
-        icon: "success",
         title: "Dirección eliminada",
-        text: "Se eliminó correctamente",
+        html: `
+          <div style="text-align: center; padding: 15px;">
+            <i class="fa-solid fa-circle-check" 
+               style="font-size: 60px; color: #10B981; margin-bottom: 15px; animation: pop 0.4s ease;"></i>
+            <p style="font-size: 16px; color: #000000ff;">
+              Se eliminó correctamente
+            </p>
+            <div style="background: rgba(16, 185, 129, 0.1); padding: 12px; border-radius: 8px; margin-top: 15px;">
+              <p style="font-size: 14px; color: #000000ff; margin: 0; font-weight: 600;">
+                ${address.tipo || "Dirección"} eliminada
+              </p>
+              <p style="font-size: 13px; color: #666; margin: 5px 0 0 0;">
+                ${address.street}, ${address.city}
+              </p>
+            </div>
+          </div>
+        `,
+        color: "#262626ff",
         confirmButtonColor: "#6366F1",
-        background: "#1E1E2F",
-        color: "#FFF",
+        confirmButtonText: "<i class='fa-solid fa-check'></i> Entendido",
+        width: "450px",
+        customClass: {
+          popup: "swal2-glass",
+          confirmButton: "swal2-button",
+        },
+        showClass: {
+          popup: "animate__animated animate__fadeInDown",
+        },
+        hideClass: {
+          popup: "animate__animated animate__fadeOutUp",
+        },
       });
     } else {
       Swal.fire({
-        icon: "error",
         title: "Error",
-        text: res.data.message || "No se pudo eliminar la dirección",
-        confirmButtonColor: "#6366F1",
-        background: "#1E1E2F",
-        color: "#FFF",
+        html: `
+          <div style="text-align: center; padding: 15px;">
+            <i class="fa-solid fa-circle-xmark" 
+               style="font-size: 60px; color: #EF4444; margin-bottom: 15px; animation: shake 0.4s ease;"></i>
+            <p style="font-size: 16px; color: #000000ff;">
+              ${res.data.message || "No se pudo eliminar la dirección"}
+            </p>
+          </div>
+        `,
+        color: "#262626ff",
+        confirmButtonColor: "#EF4444",
+        confirmButtonText: "<i class='fa-solid fa-rotate'></i> Reintentar",
+        width: "420px",
+        customClass: {
+          popup: "swal2-glass",
+          confirmButton: "swal2-button",
+        },
+        showClass: {
+          popup: "animate__animated animate__shakeX",
+        },
       });
     }
   } catch (error) {
     console.error("Error al eliminar dirección:", error);
     Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: error.response?.data?.error || "No se pudo eliminar la dirección",
-      confirmButtonColor: "#6366F1",
-      background: "#1E1E2F",
-      color: "#FFF",
+      title: "Error de conexión",
+      html: `
+        <div style="text-align: center; padding: 15px;">
+          <i class="fa-solid fa-wifi" 
+             style="font-size: 60px; color: #F59E0B; margin-bottom: 15px; animation: shake 0.4s ease;"></i>
+          <p style="font-size: 16px; color: #000000ff;">
+            No se pudo conectar con el servidor. Intenta nuevamente.
+          </p>
+        </div>
+      `,
+      color: "#262626ff",
+      confirmButtonColor: "#F59E0B",
+      confirmButtonText: "<i class='fa-solid fa-rotate'></i> Reintentar",
+      width: "420px",
+      customClass: {
+        popup: "swal2-glass",
+        confirmButton: "swal2-button",
+      },
+      showClass: {
+        popup: "animate__animated animate__shakeX",
+      },
     });
   }
 };
-
 
 
 
@@ -475,13 +705,13 @@ if (res.data.status === "success") {
     zip: res.data.address.codigo_postal,
     country: res.data.address.pais,
     tipo: res.data.address.tipo_direccion,
-    isDefault: res.data.address.principal === 1 || res.data.address.principal === true,
+    isDefault: res.data.address.principal === true || res.data.address.principal === 1,
   };
 
   setAddresses((prev) => {
     if (nueva.isDefault) {
-      // Si esta nueva es principal, las demás ya no lo son
-      return prev.map((a) => ({ ...a, isDefault: false })).concat(nueva);
+      // Si la nueva es principal, TODAS las demás deben ser false
+      return prev.map(a => ({ ...a, isDefault: false })).concat(nueva);
     } else {
       return [...prev, nueva];
     }
@@ -525,6 +755,9 @@ const editAddress = async (addressId) => {
   const address = addresses.find((a) => a.id === addressId);
   if (!address) return;
 
+  console.log('🔧 Editando dirección ID:', addressId);
+  console.log('📋 Dirección encontrada:', address);
+
   const { value: formValues } = await Swal.fire({
     title: `<h3 style="color:#FFF; font-weight:600;">Editar Dirección</h3>`,
     html: `
@@ -555,7 +788,7 @@ const editAddress = async (addressId) => {
           font-weight: 500;
           margin-left: 0% !important;
         }
-            .swal2-input::placeholder, .swal2-select::placeholder {
+        .swal2-input::placeholder, .swal2-select::placeholder {
           color: rgba(255, 255, 255, 0.5) !important;
           font-weight: 400;
         }
@@ -589,7 +822,7 @@ const editAddress = async (addressId) => {
           position: relative;
           z-index: 1;
         }
-          swal2-input:hover, .swal2-select:hover {
+        swal2-input:hover, .swal2-select:hover {
           border-color: rgba(255, 255, 255, 0.18) !important;
           background: rgba(255, 255, 255, 0.1) !important;
           transform: translateY(-1px) !important;
@@ -597,10 +830,8 @@ const editAddress = async (addressId) => {
       </style>
 
       <div style="text-align:left;">
-
         <label class="swal2-label"><i class="fas fa-road"></i> Calle y número:</label>
         <input id="swal-street" class="swal2-input" value="${address.street || ""}" placeholder="Ej: Av. Reforma 123">
-
 
         <label class="swal2-label"><i class="fas fa-city"></i> Ciudad:</label>
         <input id="swal-city" class="swal2-input" value="${address.city || ""}" placeholder="Ej: Monterrey">
@@ -611,11 +842,15 @@ const editAddress = async (addressId) => {
         <label class="swal2-label"><i class="fas fa-mail-bulk"></i> Código postal:</label>
         <input id="swal-zip" class="swal2-input" value="${address.zip || ""}" placeholder="Ej: 64000">
 
-        <label class="swal2-label"><i class="fas fa-phone"></i> Teléfono:</label>
-        <input id="swal-phone" class="swal2-input" value="${address.phone || ""}" placeholder="Ej: 8123456789">
+        <label class="swal2-label"><i class="fas fa-flag"></i> País:</label>
+        <input id="swal-country" class="swal2-input" value="${address.country || ""}" placeholder="Ej: México">
 
-        <label class="swal2-label"><i class="fas fa-sticky-note"></i> Instrucciones de entrega:</label>
-        <input id="swal-instructions" class="swal2-input" value="${address.instructions || ""}" placeholder="Ej: Tocar timbre dos veces">
+        <label class="swal2-label"><i class="fas fa-home"></i> Tipo de dirección:</label>
+        <select id="swal-tipo" class="swal2-select">
+          <option value="Casa" ${address.tipo === "Casa" ? "selected" : ""}>Casa</option>
+          <option value="Oficina" ${address.tipo === "Oficina" ? "selected" : ""}>Oficina</option>
+          <option value="Otro" ${address.tipo === "Otro" ? "selected" : ""}>Otro</option>
+        </select>
 
         <div class="swal2-checkbox-row">
           <input type="checkbox" id="swal-default" ${address.isDefault ? "checked" : ""}>
@@ -634,62 +869,148 @@ const editAddress = async (addressId) => {
     padding: "25px",
     focusConfirm: false,
     preConfirm: () => {
-      const name = document.getElementById("swal-name").value.trim();
       const street = document.getElementById("swal-street").value.trim();
-      const colonia = document.getElementById("swal-colonia").value.trim();
       const city = document.getElementById("swal-city").value.trim();
       const state = document.getElementById("swal-state").value.trim();
       const zip = document.getElementById("swal-zip").value.trim();
-      const phone = document.getElementById("swal-phone").value.trim();
-      const instructions = document.getElementById("swal-instructions").value.trim();
+      const country = document.getElementById("swal-country").value.trim();
+      const tipo = document.getElementById("swal-tipo").value;
       const isDefault = document.getElementById("swal-default").checked;
 
-      if (!name || !street || !city) {
-        Swal.showValidationMessage("Los campos 'nombre', 'calle' y 'ciudad' son obligatorios.");
+      if (!street || !city) {
+        Swal.showValidationMessage("Los campos 'calle' y 'ciudad' son obligatorios.");
         return false;
       }
 
-      return { name, street, colonia, city, state, zip, phone, instructions, isDefault };
+      return { street, city, state, zip, country, tipo, isDefault };
     },
   });
 
-  if (!formValues) return;
+  if (!formValues) {
+    console.log('❌ Usuario canceló la edición');
+    return;
+  }
 
-const updatedAddresses = addresses.map((addr) =>
-  addr.id === addressId
-    ? { ...addr, ...formValues }
-    : { ...addr, isDefault: formValues.isDefault ? false : addr.isDefault }
-);
+  console.log('📤 Datos del formulario:', formValues);
+  console.log('👤 User ID:', user?.id);
 
-if (formValues.isDefault) {
-  // Si se marcó como principal, desactiva las demás
-  setAddresses(
-    updatedAddresses.map((a) => ({
-      ...a,
-      isDefault: a.id === addressId,
-    }))
-  );
-} else {
-  setAddresses(updatedAddresses);
-}
+  try {
+    // Preparar datos para enviar al backend
+    const requestData = {
+      user_id: user.id,
+      direccion: formValues.street,
+      ciudad: formValues.city,
+      estado_provincia: formValues.state,
+      codigo_postal: formValues.zip,
+      pais: formValues.country,
+      tipo_direccion: formValues.tipo,
+      principal: formValues.isDefault
+    };
 
+    console.log('🚀 Enviando al backend:', {
+      url: `http://127.0.0.1:5000/address/${addressId}/edit`,
+      data: requestData
+    });
 
-  Swal.fire({
-    icon: "success",
-    title: "¡Dirección actualizada!",
-    text: "Los cambios se guardaron correctamente.",
-    confirmButtonColor: "#6366F1",
-    background: "#1E1E2F",
-    color: "#FFF",
-    showClass: {
-      popup: "animate__animated animate__fadeInUp animate__faster",
-    },
-    hideClass: {
-      popup: "animate__animated animate__fadeOutDown animate__faster",
-    },
-  });
+    // 🔥 LLAMADA A LA NUEVA API DE EDICIÓN
+    const res = await axios.put(`http://127.0.0.1:5000/address/${addressId}/edit`, requestData);
+
+    console.log('✅ Respuesta del backend:', res.data);
+
+    if (res.data.status === "success") {
+      // Actualizar el estado local
+      if (formValues.isDefault) {
+        // Si se marcó como principal, asegurar que solo esta sea principal
+        console.log('🔄 Marcando como dirección principal');
+        setAddresses(prev => 
+          prev.map(a => ({
+            ...a,
+            isDefault: a.id === addressId
+          }))
+        );
+      } else {
+        // Si no es principal, solo actualiza esta dirección
+        console.log('✏️ Actualizando dirección sin cambiar principal');
+        setAddresses(prev =>
+          prev.map(a =>
+            a.id === addressId ? { 
+              ...a, 
+              street: formValues.street,
+              city: formValues.city,
+              state: formValues.state,
+              zip: formValues.zip,
+              country: formValues.country,
+              tipo: formValues.tipo,
+              isDefault: false 
+            } : a
+          )
+        );
+      }
+
+      console.log('🎉 Dirección actualizada exitosamente');
+
+Swal.fire({
+  title: "¡Dirección actualizada!",
+  html: `
+    <div style="text-align: center; padding: 15px;">
+      <i class="fa-solid fa-circle-check" 
+         style="font-size: 60px; color: #10B981; margin-bottom: 15px; animation: pop 0.4s ease;"></i>
+      <p style="font-size: 16px; color: #000000ff;">
+        Los cambios se guardaron correctamente.
+      </p>
+      <div style="background: rgba(16, 185, 129, 0.1); padding: 12px; border-radius: 8px; margin-top: 15px;">
+        <p style="font-size: 14px; color: #000000ff; margin: 0; font-weight: 600;">
+          ${address.tipo || "Dirección"} actualizada
+        </p>
+        <p style="font-size: 13px; color: #666; margin: 5px 0 0 0;">
+          ${formValues.street}, ${formValues.city}
+        </p>
+      </div>
+    </div>
+  `,
+  color: "#262626ff",
+  confirmButtonColor: "#6366F1",
+  confirmButtonText: "<i class='fa-solid fa-check'></i> Entendido",
+  width: "450px",
+  customClass: {
+    popup: "swal2-glass",
+    confirmButton: "swal2-button",
+  },
+  showClass: {
+    popup: "animate__animated animate__fadeInDown",
+  },
+  hideClass: {
+    popup: "animate__animated animate__fadeOutUp",
+  },
+});
+    } else {
+      console.error('❌ Error en respuesta del backend:', res.data);
+      throw new Error(res.data.message || "Error al actualizar la dirección");
+    }
+  } catch (error) {
+    console.error('💥 Error completo al actualizar dirección:', error);
+    console.error('📄 Respuesta del error:', error.response?.data);
+    
+    let errorMessage = "No se pudo actualizar la dirección.";
+    
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: errorMessage,
+      confirmButtonColor: "#EF4444",
+      background: "#1E1E2F",
+      color: "#FFF",
+    });
+  }
 };
-
  const viewOrderDetails = async (orderId) => {
     try {
       const orderDetails = await apiService.getOrderDetails(orderId);
@@ -1269,8 +1590,6 @@ const followPedido = (orderId) => {
 
 
           {/* SECCIÓN DE PEDIDOS RECIENTES */}
-
-          {/* SECCIÓN DE FAVORITOS */}
           {activeSection === 'orders' && (
             <div id="orders-section" className="profile-section">
               <h2 className="section-title">Mis Pedidos</h2>
