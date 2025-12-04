@@ -11,6 +11,8 @@ export const FloatingWhatsApp = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
+  const [trackingFlow, setTrackingFlow] = useState(false);
+  const [trackingStep, setTrackingStep] = useState(0); // 0: no activo, 1: número, 2: email
   const messagesEndRef = useRef(null);
 
   // Mensaje de bienvenida automático con delay
@@ -125,31 +127,52 @@ export const FloatingWhatsApp = () => {
       setIsMinimized(!isMinimized);
     }
   };
-
-  const handleQuickAction = async (action) => {
+const handleQuickAction = async (action) => {
     switch(action) {
       case "👨‍💼 Hablar con agente":
-        await Swal.fire({
+        const { value: contactMethod } = await Swal.fire({
           title: 'Conectar con Agente',
           html: `
             <div class="agent-modal">
               <div class="agent-avatar">👨‍💼</div>
-              <h4>¿Preferiría hablar con un agente humano?</h4>
-              <p>Podemos conectarle inmediatamente con nuestro equipo de soporte.</p>
+              <h4>¿Cómo prefiere contactar con nuestro agente?</h4>
+              <p>Seleccione el método de contacto preferido:</p>
               <div class="contact-options">
-                <button class="contact-btn whatsapp">📱 WhatsApp</button>
-                <button class="contact-btn phone">📞 Llamada</button>
-                <button class="contact-btn email">✉️ Email</button>
+                <button type="button" class="contact-btn whatsapp" onclick="this.closest('.swal2-container').querySelector('.swal2-confirm').dataset.method='whatsapp'">
+                  <span>📱</span>
+                  <span>WhatsApp</span>
+                </button>
+                <button type="button" class="contact-btn phone" onclick="this.closest('.swal2-container').querySelector('.swal2-confirm').dataset.method='phone'">
+                  <span>📞</span>
+                  <span>Llamada</span>
+                </button>
+                <button type="button" class="contact-btn email" onclick="this.closest('.swal2-container').querySelector('.swal2-confirm').dataset.method='email'">
+                  <span>✉️</span>
+                  <span>Email</span>
+                </button>
               </div>
             </div>
           `,
           showCancelButton: true,
-          confirmButtonText: 'Solicitar contacto',
+          confirmButtonText: 'Continuar',
           confirmButtonColor: 'var(--primary)',
+          preConfirm: () => {
+            const confirmBtn = document.querySelector('.swal2-confirm');
+            return confirmBtn.dataset.method || null;
+          },
           customClass: {
             popup: 'corporate-swal'
+          },
+          didOpen: () => {
+            // Establecer por defecto
+            const confirmBtn = document.querySelector('.swal2-confirm');
+            confirmBtn.dataset.method = 'whatsapp';
           }
         });
+        
+        if (contactMethod) {
+          await handleContactMethod(contactMethod);
+        }
         break;
       
       case "💼 Servicio corporativo":
@@ -174,6 +197,412 @@ export const FloatingWhatsApp = () => {
     }
   };
 
+  // Nueva función para manejar el método de contacto seleccionado
+  const handleContactMethod = async (method) => {
+    switch(method) {
+      case 'whatsapp':
+        // Número de WhatsApp (agrega tu número)
+        const whatsappNumber = "521XXXXXXXXXX"; // Reemplaza con tu número
+        const whatsappMessage = encodeURIComponent("¡Hola! Me gustaría hablar con un agente de Fashion Luxt.");
+        window.open(`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`, '_blank');
+        
+        // Agregar mensaje al chat
+        const whatsappMessageBot = {
+          id: Date.now(),
+          text: "Perfecto, te he redirigido a WhatsApp. Nuestro agente te atenderá en breve.",
+          isBot: true,
+          timestamp: new Date(),
+          options: ["📦 Seguimiento", "🎯 Productos", "💼 Corporativo", "🛠️ Soporte", "⬅️ Menú principal"]
+        };
+        setMessages(prev => [...prev, whatsappMessageBot]);
+        break;
+        
+      case 'phone':
+        // Número de teléfono (agrega tu número)
+        const phoneNumber = "+527442333172"; // Reemplaza con tu número
+        
+        // Mostrar confirmación para llamada
+        const { value: confirmCall } = await Swal.fire({
+          title: 'Iniciar Llamada',
+          html: `
+            <div class="call-modal">
+              <div class="call-icon">📞</div>
+              <h4>¿Desea llamar a nuestro agente?</h4>
+              <p>Se redirigirá a la aplicación de teléfono para llamar a:</p>
+              <div class="phone-number-display">
+                <strong>${phoneNumber}</strong>
+              </div>
+              <p class="call-hours">
+                Horario de atención: Lunes a Viernes 9:00 - 18:00 hrs
+              </p>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: 'Llamar ahora',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#25D366',
+          customClass: {
+            popup: 'call-swal'
+          }
+        });
+        
+        if (confirmCall) {
+          // Iniciar llamada telefónica
+          window.open(`tel:${phoneNumber}`, '_self');
+          
+          // Agregar mensaje al chat
+          const phoneMessageBot = {
+            id: Date.now(),
+            text: `Perfecto, se está conectando la llamada al número: ${phoneNumber}. Nuestro agente te atenderá en breve.`,
+            isBot: true,
+            timestamp: new Date(),
+            options: ["📦 Seguimiento", "🎯 Productos", "💼 Corporativo", "🛠️ Soporte", "⬅️ Menú principal"]
+          };
+          setMessages(prev => [...prev, phoneMessageBot]);
+        }
+        break;
+        
+      case 'email':
+  // Modifica la función handleContactMethod para el caso 'email'
+case 'email':
+  // Mostrar formulario de email en el chat
+  const { value: formValues } = await Swal.fire({
+    title: 'Enviar Email',
+    html: `
+      <div class="email-form-modal">
+        <div class="email-icon">✉️</div>
+        <p>Complete el formulario y nuestro agente se pondrá en contacto:</p>
+        
+        <div class="form-group">
+          <label for="email-name">Nombre completo:</label>
+          <input 
+            type="text" 
+            id="email-name" 
+            class="swal2-input" 
+            placeholder="Tu nombre"
+            required
+          >
+        </div>
+        
+        <div class="form-group">
+          <label for="email-email">Email de contacto:</label>
+          <input 
+            type="email" 
+            id="email-email" 
+            class="swal2-input" 
+            placeholder="tucorreo@ejemplo.com"
+            required
+          >
+        </div>
+        
+        <div class="form-group">
+          <label for="email-subject">Asunto:</label>
+          <input 
+            type="text" 
+            id="email-subject" 
+            class="swal2-input" 
+            placeholder="Consulta sobre..."
+            value="Consulta - Fashion Luxt"
+          >
+        </div>
+        
+        <div class="form-group">
+          <label for="email-message">Mensaje:</label>
+          <textarea 
+            id="email-message" 
+            class="swal2-textarea" 
+            placeholder="Describe tu consulta aquí..."
+            rows="4"
+            required
+          ></textarea>
+        </div>
+        
+        <div class="email-note">
+          <small>Nuestro equipo te responderá en un máximo de 24 horas hábiles.</small>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Enviar consulta',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#EA4335',
+    focusConfirm: false,
+    preConfirm: () => {
+      const name = document.getElementById('email-name').value;
+      const email = document.getElementById('email-email').value;
+      const subject = document.getElementById('email-subject').value;
+      const message = document.getElementById('email-message').value;
+      
+      if (!name || !email || !subject || !message) {
+        Swal.showValidationMessage('Por favor complete todos los campos');
+        return false;
+      }
+      
+      if (!/^\S+@\S+\.\S+$/.test(email)) {
+        Swal.showValidationMessage('Por favor ingrese un email válido');
+        return false;
+      }
+      
+      return { name, email, subject, message };
+    },
+    customClass: {
+      popup: 'email-swal'
+    }
+  });
+  
+  if (formValues) {
+    // Aquí puedes enviar el email a tu backend
+    try {
+      // Opción 1: Enviar a tu API (recomendado)
+      const response = await fetch('http://localhost:5000/api/contact/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formValues.name,
+          email: formValues.email,
+          subject: formValues.subject,
+          message: formValues.message,
+          timestamp: new Date().toISOString()
+        })
+      });
+      
+      if (response.ok) {
+        await Swal.fire({
+          title: '¡Consulta enviada!',
+          html: `
+            <div class="success-email">
+              <div class="success-icon">✅</div>
+              <p><strong>Gracias, ${formValues.name}</strong></p>
+              <p>Tu consulta ha sido enviada correctamente.</p>
+              <p class="response-time">Recibirás una respuesta a: <strong>${formValues.email}</strong></p>
+              <p class="small-note">Tiempo estimado de respuesta: 24 horas hábiles</p>
+            </div>
+          `,
+          icon: 'success',
+          confirmButtonColor: '#EA4335'
+        });
+      }
+    } catch (error) {
+      console.error('Error al enviar email:', error);
+      // Si falla la API, mostrar confirmación local
+      await Swal.fire({
+        title: '¡Consulta registrada!',
+        html: `
+          <div class="local-success">
+            <p>Hemos registrado tu consulta:</p>
+            <div class="consult-summary">
+              <p><strong>Nombre:</strong> ${formValues.name}</p>
+              <p><strong>Email:</strong> ${formValues.email}</p>
+              <p><strong>Asunto:</strong> ${formValues.subject}</p>
+            </div>
+            <p>Nuestro equipo se pondrá en contacto contigo.</p>
+          </div>
+        `,
+        icon: 'info',
+        confirmButtonColor: '#EA4335'
+      });
+    }
+    
+    // Agregar mensaje al chat
+    const emailMessageBot = {
+      id: Date.now(),
+      text: `📧 **Consulta enviada exitosamente**\n\nHola ${formValues.name}, hemos recibido tu consulta sobre "${formValues.subject}".\n\n• **Email registrado:** ${formValues.email}\n• **Estado:** En proceso\n• **Tiempo estimado:** 24 horas hábiles\n\nTe contactaremos pronto. Mientras tanto, ¿en qué más puedo ayudarte?`,
+      isBot: true,
+      timestamp: new Date(),
+      options: ["📦 Seguimiento", "🎯 Productos", "💼 Corporativo", "🛠️ Soporte", "⬅️ Menú principal"]
+    };
+    setMessages(prev => [...prev, emailMessageBot]);
+  }
+  break;
+    }
+  };
+
+  // Función para consultar el estado del paquete
+  const fetchTrackingStatus = async (trackingNumber) => {
+    setIsTyping(true);
+    
+    try {
+      const response = await fetch('http://localhost:5000/api/tracking', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tracking_number: trackingNumber
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error en la consulta');
+      }
+
+      const data = await response.json();
+      
+      if (data.status === 'error') {
+        const errorMessage = {
+          id: Date.now() + 2,
+          text: `❌ ${data.message}\n\n¿Desea intentar de otra forma?`,
+          isBot: true,
+          timestamp: new Date(),
+          options: ["📧 Buscar por email", "📞 Contactar soporte", "⬅️ Menú principal"]
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      } else {
+        const statusMessage = {
+          id: Date.now() + 2,
+          text: formatTrackingResponse(data.data),
+          isBot: true,
+          timestamp: new Date(),
+          options: ["🔄 Actualizar estado", "📞 Contactar mensajería", "📋 Más detalles", "⬅️ Menú principal"]
+        };
+        
+        setMessages(prev => [...prev, statusMessage]);
+      }
+      
+      // Resetear flujo de seguimiento
+      setTrackingFlow(false);
+      setTrackingStep(0);
+      
+    } catch (error) {
+      console.error('Error al consultar seguimiento:', error);
+      
+      const errorMessage = {
+        id: Date.now() + 2,
+        text: `😕 Lo siento, hubo un problema al consultar el estado.\n\nPor favor, intente de nuevo o contacte a nuestro equipo de soporte.`,
+        isBot: true,
+        timestamp: new Date(),
+        options: ["🔢 Intentar otro número", "📧 Buscar por email", "📞 Contactar soporte"]
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  // Función para buscar por email
+  const fetchOrdersByEmail = async (email) => {
+    setIsTyping(true);
+    
+    try {
+      const response = await fetch('http://localhost:5000/api/tracking/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error en la consulta');
+      }
+
+      const data = await response.json();
+      
+      if (data.status === 'error') {
+        const errorMessage = {
+          id: Date.now() + 2,
+          text: `❌ ${data.message}\n\nPor favor, verifique el email e intente de nuevo.`,
+          isBot: true,
+          timestamp: new Date(),
+          options: ["🔢 Buscar por número", "📞 Contactar soporte", "⬅️ Menú principal"]
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      } else if (data.data.ordenes.length === 0) {
+        const noOrdersMessage = {
+          id: Date.now() + 2,
+          text: `📭 No se encontraron órdenes para el email: ${email}\n\n¿Desea buscar con otro email o consultar por número de seguimiento?`,
+          isBot: true,
+          timestamp: new Date(),
+          options: ["🔢 Buscar por número", "✏️ Ingresar otro email", "⬅️ Menú principal"]
+        };
+        setMessages(prev => [...prev, noOrdersMessage]);
+      } else {
+        const ordersList = data.data.ordenes.map(order => 
+          `• #${order.order_id.slice(0, 8)} - ${order.estado} - $${order.total}`
+        ).join('\n');
+        
+        const ordersMessage = {
+          id: Date.now() + 2,
+          text: `📋 **Órdenes encontradas para ${data.data.cliente}**
+
+Encontradas ${data.data.total_ordenes} orden(es):
+
+${ordersList}
+
+Para consultar el estado completo de una orden, por favor ingrese el número de seguimiento completo.`,
+          isBot: true,
+          timestamp: new Date(),
+          options: ["🔢 Ingresar número de seguimiento", "📋 Ver otra cuenta", "⬅️ Menú principal"]
+        };
+        
+        setMessages(prev => [...prev, ordersMessage]);
+      }
+      
+    } catch (error) {
+      console.error('Error al buscar por email:', error);
+      
+      const errorMessage = {
+        id: Date.now() + 2,
+        text: `😕 Lo siento, hubo un problema al buscar por email.\n\nPor favor, intente de nuevo o use el número de seguimiento.`,
+        isBot: true,
+        timestamp: new Date(),
+        options: ["🔢 Buscar por número", "📞 Contactar soporte", "⬅️ Menú principal"]
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+      setTrackingFlow(false);
+      setTrackingStep(0);
+    }
+  };
+
+  // Función para formatear la respuesta del seguimiento
+  const formatTrackingResponse = (trackingData) => {
+    const statusEmoji = {
+      'Pendiente': '⏳',
+      'Confirmado': '✅', 
+      'En preparación': '📦',
+      'Enviado': '🚚',
+      'Entregado': '🏠',
+      'Cancelado': '❌'
+    };
+    
+    const emoji = statusEmoji[trackingData.estado] || '📋';
+    
+    // Formatear fecha
+    const orderDate = new Date(trackingData.fecha_creacion);
+    const formattedDate = orderDate.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+    
+    return `
+${emoji} **ESTADO DEL PEDIDO**
+
+📦 **Número de seguimiento:** #${trackingData.order_id}
+📋 **Estado actual:** ${trackingData.estado}
+📍 **Progreso:** ${trackingData.progreso}% completado
+
+💳 **Total:** $${trackingData.total.toFixed(2)}
+👤 **Cliente:** ${trackingData.cliente.nombre}
+📅 **Fecha del pedido:** ${formattedDate}
+
+${trackingData.mensaje_estado}
+
+📦 **Productos incluidos:**
+${trackingData.detalles.map(item => `• ${item.producto} (x${item.cantidad}) - $${item.subtotal.toFixed(2)}`).join('\n')}
+
+¿En qué más puedo ayudarle?
+    `;
+  };
+
   const handleResponse = async (option) => {
     const userMessage = {
       id: Date.now(),
@@ -186,40 +615,83 @@ export const FloatingWhatsApp = () => {
     // Manejar acciones rápidas
     if (option === "👨‍💼 Hablar con agente" || option === "💼 Servicio corporativo") {
       await handleQuickAction(option);
+      // IMPORTANTE: Salir después de manejar la acción rápida
+      return;
+    }
+
+    // Manejar el flujo de seguimiento
+    if (option === "📦 Seguimiento de pedido" || option === "🔢 Número de orden") {
+      setTrackingFlow(true);
+      setTrackingStep(1);
+    }
+
+    // Manejar búsqueda por email
+    if (option === "📧 Buscar por email") {
+      setTrackingFlow(true);
+      setTrackingStep(2);
     }
 
     setIsTyping(true);
     
     setTimeout(() => {
       let botResponse;
+      
       switch(option) {
         case "📦 Seguimiento de pedido":
           botResponse = {
             id: Date.now() + 1,
-            text: "Para localizar su pedido, puedo ayudarle de varias formas. ¿Tiene a mano su número de orden o prefiere buscarlo por email?",
+            text: "¡Perfecto! Para localizar su pedido, puedo ayudarle de varias formas. ¿Tiene a mano su número de seguimiento o prefiere buscarlo por email?",
             isBot: true,
             timestamp: new Date(),
-            options: ["🔢 Número de orden", "📧 Buscar por email", "📞 Llamar a logística", "⬅️ Menú principal"]
+            options: ["🔢 Número de seguimiento", "📧 Buscar por email", "📞 Contactar soporte", "⬅️ Menú principal"]
           };
           break;
+        
+        case "🔢 Número de orden":
+        case "🔢 Número de seguimiento":
+          botResponse = {
+            id: Date.now() + 1,
+            text: "Por favor, ingrese su **número de seguimiento** (puede encontrarlo en su email de confirmación o en su cuenta):",
+            isBot: true,
+            timestamp: new Date(),
+            options: ["📧 No tengo el número", "📞 Contactar soporte"]
+          };
+          setTrackingFlow(true);
+          setTrackingStep(1);
+          break;
+        
+        case "📧 Buscar por email":
+          botResponse = {
+            id: Date.now() + 1,
+            text: "Por favor, ingrese su **dirección de email** registrada en Fashion Luxt:",
+            isBot: true,
+            timestamp: new Date(),
+            options: ["🔢 Tengo el número de seguimiento", "⬅️ Menú principal"]
+          };
+          setTrackingFlow(true);
+          setTrackingStep(2);
+          break;
+        
         case "🎯 Consultar productos":
           botResponse = {
             id: Date.now() + 1,
             text: "Perfecto. Tenemos varias categorías disponibles. ¿Le interesa ver nuestra nueva colección o busca algo específico?",
             isBot: true,
             timestamp: new Date(),
-            options: ["🆕 Nueva colección", "🔥 Productos populares", "🎁 Ofertas especiales", "🔍 Búsqueda personalizada"]
+            options: ["🆕 Nueva colección", "🔥 Productos populares", "🎁 Ofertas especiales", "🔍 Búsqueda personalizada", "⬅️ Menú principal"]
           };
           break;
+        
         case "🛠️ Soporte técnico":
           botResponse = {
             id: Date.now() + 1,
             text: "Para soporte técnico, puedo ayudarle con:\n\n• Problemas con la web\n• Consultas de cuenta\n• Facturación\n• Otros temas técnicos",
             isBot: true,
             timestamp: new Date(),
-            options: ["🌐 Problemas web", "👤 Cuenta usuario", "🧾 Facturación", "⚙️ Otros temas"]
+            options: ["🌐 Problemas web", "👤 Cuenta usuario", "🧾 Facturación", "⚙️ Otros temas", "⬅️ Menú principal"]
           };
           break;
+        
         case "⬅️ Menú principal":
           botResponse = {
             id: Date.now() + 1,
@@ -234,15 +706,110 @@ export const FloatingWhatsApp = () => {
               "👨‍💼 Hablar con agente"
             ]
           };
+          setTrackingFlow(false);
+          setTrackingStep(0);
           break;
-        default:
+        
+        case "📧 No tengo el número":
           botResponse = {
             id: Date.now() + 1,
-            text: "Entendido. He tomado nota de su consulta y nuestro equipo se pondrá en contacto si es necesario. ¿Hay algo más en lo que pueda asistirle?",
+            text: "No hay problema. Puedo ayudarle a encontrar su pedido de otras formas:\n\n1. **Por email**: Envíeme su correo electrónico registrado\n2. **Contactar a soporte**: Le conecto con nuestro equipo\n\n¿Cómo prefiere proceder?",
             isBot: true,
             timestamp: new Date(),
-            options: ["📦 Seguimiento", "🎯 Productos", "💼 Corporativo", "🛠️ Soporte"]
+            options: ["📧 Buscar por email", "📞 Contactar soporte", "⬅️ Menú principal"]
           };
+          setTrackingFlow(false);
+          break;
+        
+        case "🔄 Actualizar estado":
+          botResponse = {
+            id: Date.now() + 1,
+            text: "Para actualizar el estado de su pedido, necesito consultarlo nuevamente. ¿Podría proporcionarme el número de seguimiento?",
+            isBot: true,
+            timestamp: new Date(),
+            options: ["🔢 Sí, tengo el número", "📧 Buscar por email", "⬅️ Menú principal"]
+          };
+          break;
+        
+        // CASOS PARA LAS OPCIONES DEL MENÚ REDUCIDO
+        case "📦 Seguimiento":
+          botResponse = {
+            id: Date.now() + 1,
+            text: "Perfecto, sobre seguimiento de pedidos ¿En qué específicamente puedo ayudarle?",
+            isBot: true,
+            timestamp: new Date(),
+            options: ["🔢 Número de seguimiento", "📧 Buscar por email", "📞 Contactar soporte", "⬅️ Menú principal"]
+          };
+          break;
+        
+        case "🎯 Productos":
+          botResponse = {
+            id: Date.now() + 1,
+            text: "Perfecto, sobre productos ¿Qué le gustaría consultar?",
+            isBot: true,
+            timestamp: new Date(),
+            options: ["🆕 Nueva colección", "🔥 Productos populares", "🎁 Ofertas especiales", "🔍 Búsqueda personalizada", "⬅️ Menú principal"]
+          };
+          break;
+        
+        case "💼 Corporativo":
+          botResponse = {
+            id: Date.now() + 1,
+            text: "Perfecto, sobre servicio corporativo ¿En qué puedo asistirle?",
+            isBot: true,
+            timestamp: new Date(),
+            options: ["🏢 Solicitar información", "📞 Contactar ventas", "📊 Cotizaciones", "⬅️ Menú principal"]
+          };
+          break;
+        
+        case "🛠️ Soporte":
+          botResponse = {
+            id: Date.now() + 1,
+            text: "Perfecto, sobre soporte técnico ¿En qué puedo ayudarle?",
+            isBot: true,
+            timestamp: new Date(),
+            options: ["🌐 Problemas web", "👤 Cuenta usuario", "🧾 Facturación", "⚙️ Otros temas", "⬅️ Menú principal"]
+          };
+          break;
+        
+        default:
+          // Si estamos en flujo de seguimiento y el usuario ingresa algo
+          if (trackingFlow && trackingStep === 1) {
+            // Es un número de seguimiento
+            botResponse = {
+              id: Date.now() + 1,
+              text: `🔍 Consultando estado para: "${option}"...`,
+              isBot: true,
+              timestamp: new Date()
+            };
+            
+            // Llamar a la función para consultar el seguimiento
+            fetchTrackingStatus(option);
+            return; // Salir temprano porque fetchTrackingStatus manejará la respuesta
+          } 
+          else if (trackingFlow && trackingStep === 2) {
+            // Es un email
+            botResponse = {
+              id: Date.now() + 1,
+              text: `📧 Buscando órdenes para: "${option}"...`,
+              isBot: true,
+              timestamp: new Date()
+            };
+            
+            // Llamar a la función para buscar por email
+            fetchOrdersByEmail(option);
+            return; // Salir temprano porque fetchOrdersByEmail manejará la respuesta
+          }
+          else {
+            // Para cualquier otro mensaje no reconocido
+            botResponse = {
+              id: Date.now() + 1,
+              text: "Entendido. He tomado nota de su consulta y nuestro equipo se pondrá en contacto si es necesario. ¿Hay algo más en lo que pueda asistirle?",
+              isBot: true,
+              timestamp: new Date(),
+              options: ["📦 Seguimiento", "🎯 Productos", "💼 Corporativo", "🛠️ Soporte", "⬅️ Menú principal"]
+            };
+          }
       }
 
       setMessages(prev => [...prev, botResponse]);
@@ -259,20 +826,39 @@ export const FloatingWhatsApp = () => {
         timestamp: new Date()
       };
       setMessages(prev => [...prev, userMessage]);
-      setInputMessage("");
       
-      setIsTyping(true);
-      setTimeout(() => {
+      // Si estamos en flujo de seguimiento
+      if (trackingFlow && trackingStep === 1) {
+        // Es un número de seguimiento
         const botResponse = {
           id: Date.now() + 1,
-          text: "Gracias por su mensaje. Lo he registrado en nuestro sistema y nuestro equipo se pondrá en contacto con usted si es necesario. ¿Puedo ayudarle con algo más mientras tanto?",
+          text: `🔍 Consultando estado para: "${inputMessage}"...`,
           isBot: true,
-          timestamp: new Date(),
-          options: ["📦 Seguimiento", "🎯 Productos", "💼 Corporativo", "🛠️ Soporte"]
+          timestamp: new Date()
         };
         setMessages(prev => [...prev, botResponse]);
-        setIsTyping(false);
-      }, 1800);
+        fetchTrackingStatus(inputMessage);
+        setInputMessage("");
+        return; // IMPORTANTE: Salir aquí
+      }
+      else if (trackingFlow && trackingStep === 2) {
+        // Es un email
+        const botResponse = {
+          id: Date.now() + 1,
+          text: `📧 Buscando órdenes para: "${inputMessage}"...`,
+          isBot: true,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, botResponse]);
+        fetchOrdersByEmail(inputMessage);
+        setInputMessage("");
+        return; // IMPORTANTE: Salir aquí
+      }
+      else {
+        // Para mensajes normales, usar handleResponse para procesarlos
+        setInputMessage("");
+        handleResponse(inputMessage);
+      }
     }
   };
 
@@ -423,7 +1009,7 @@ export const FloatingWhatsApp = () => {
                         <div className="bot-avatar">FL</div>
                       )}
                       <div className="message-bubble-enhanced">
-                        <p>{message.text}</p>
+                        <p style={{ whiteSpace: 'pre-line' }}>{message.text}</p>
                         <span className="message-time-enhanced">
                           {formatTime(message.timestamp)}
                         </span>
@@ -484,7 +1070,13 @@ export const FloatingWhatsApp = () => {
               <div className="input-container-enhanced">
                 <input
                   type="text"
-                  placeholder="Escribe tu mensaje..."
+                  placeholder={
+                    trackingFlow && trackingStep === 1 
+                      ? "Ingrese número de seguimiento..." 
+                      : trackingFlow && trackingStep === 2
+                      ? "Ingrese su email..."
+                      : "Escribe tu mensaje..."
+                  }
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}

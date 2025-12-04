@@ -7,13 +7,71 @@ from sqlalchemy.exc import SQLAlchemyError
 import mysql.connector
 from mysql.connector import Error
 from datetime import datetime
+from datetime import datetime, timedelta  # Agrega timedelta
+from cryptography.fernet import Fernet
+import base64
 
 # =====================================
 # CONFIGURACIÓN INICIAL
 # =====================================
 app = Flask(__name__)
+DIALOGFLOW_URL = "https://dialogflow.googleapis.com/v2/projects/PROJECT-ID/agent/sessions/123456:detectIntent"
 app.config['SECRET_KEY'] = 'Fashion-Luxe'
 
+
+from cryptography.fernet import Fernet
+import base64
+# =====================================
+# FUNCIÓN MEJORADA PARA DESENCRIPTAR IDs
+# =====================================
+
+def decrypt_id(encrypted_id):
+    """Desencripta un ID encriptado con Fernet"""
+    try:
+        # Convertir tu clave secreta a formato Fernet (32 bytes en base64)
+        key = base64.urlsafe_b64encode(app.config['SECRET_KEY'].ljust(32)[:32].encode())
+        cipher = Fernet(key)
+        decrypted = cipher.decrypt(encrypted_id.encode()).decode()
+        return decrypted
+    except Exception as e:
+        # Si falla con Fernet, probar otros formatos
+        print(f"❌ Error desencriptando ID con Fernet: {str(e)}")
+        
+        # INTENTO 2: Si es un ID corto como "2C60F1FD", podría ser hexadecimal
+        if len(encrypted_id) == 8 and all(c in '0123456789ABCDEF' for c in encrypted_id.upper()):
+            try:
+                # Convertir de hexadecimal a string
+                decoded = bytes.fromhex(encrypted_id).decode('utf-8')
+                print(f"🔓 Hexadecimal decodificado: {decoded}")
+                return decoded
+            except:
+                pass
+        
+        # INTENTO 3: Si es base64
+        try:
+            import base64
+            decoded = base64.b64decode(encrypted_id.encode()).decode()
+            print(f"🔓 Base64 decodificado: {decoded}")
+            return decoded
+        except:
+            pass
+            
+        # INTENTO 4: Si parece un hash corto, buscar directamente en la BD
+        # (algunos sistemas muestran solo los primeros 8 caracteres del hash)
+        if len(encrypted_id) == 8:
+            print(f"🔍 Buscando órdenes que contengan: {encrypted_id}")
+            orders = Order.query.filter(Order.id.like(f'%{encrypted_id}%')).all()
+            if orders:
+                print(f"✅ Encontradas {len(orders)} órdenes que contienen '{encrypted_id}'")
+                if len(orders) == 1:
+                    return orders[0].id
+        
+        return None
+    except Exception as e:
+        print(f"❌ Error en decrypt_id: {str(e)}")
+        return None
+
+# ========
 # Base de datos MySQL
 def create_database():
     try:
@@ -3134,9 +3192,766 @@ def delete_category(category_id):
             'status': 'error',
             'message': 'Error al eliminar la categoría'
         }), 500
-    
-    
+ # =====================================
+# SEGUIMIENTO DE PAQUETES/ÓRDENES
 # =====================================
+
+# =====================================
+# SEGUIMIENTO DE PAQUETES/ÓRDENES
+# =====================================
+@app.route("/api/tracking", methods=["POST"])
+def track_package():
+    """
+    Endpoint para consultar el estado de una orden usando su ID como número de seguimiento
+    """
+    try:
+        # Manejar tanto POST como GET
+        if request.method == "GET":
+            tracking_number = request.args.get('tracking_number')
+            if not tracking_number:
+                return jsonify({
+                    "status": "error",
+                    "message": "Se requiere el parámetro tracking_number en la URL"
+                }), 400
+        else:  # POST
+            data = request.get_json()
+            if not data or 'tracking_number' not in data:
+                return jsonify({
+                    "status": "error",
+                    "message": "Se requiere el número de seguimiento (tracking_number)"
+                }), 400
+            tracking_number = data['tracking_number'].strip()
+        
+        print(f"🔍 Tracking recibido: {tracking_number}")
+        print(f"📏 Longitud: {len(tracking_number)}")
+        
+        order = None
+        
+        # ESTRATEGIA 4 NUEVA: Buscar por primeros 8 caracteres del ID
+        # Primero verificar si el tracking_number podría ser un ID corto (8 caracteres)
+        if not order and len(tracking_number) == 8:
+            # Buscar todas las órdenes y comparar sus primeros 8 caracteres
+            all_orders = Order.query.all()
+            for ord in all_orders:
+                if str(ord.id)[:8].lower() == tracking_number.lower():
+                    order = ord
+                    print(f"✅ Orden encontrada por ID corto (8 chars): {tracking_number}")
+                    break
+        
+        # ESTRATEGIA 1: Buscar directamente (para IDs no encriptados)
+        if not order:
+            order = Order.query.filter_by(id=tracking_number).first()
+            if order:
+                print(f"✅ Orden encontrada directamente: {tracking_number}")
+        
+        # ESTRATEGIA 2: Si es número, buscar como entero
+        if not order and tracking_number.isdigit():
+            order = Order.query.filter_by(id=int(tracking_number)).first()
+            if order:
+                print(f"✅ Orden encontrada como número: {int(tracking_number)}")
+        
+        # ESTRATEGIA 3: Intentar desencriptar
+        if not order:
+            print("🔐 Intentando desencriptar ID...")
+            decrypted_id = decrypt_id(tracking_number)
+            if decrypted_id:
+                print(f"🔓 ID desencriptado: {decrypted_id}")
+                order = Order.query.filter_by(id=decrypted_id).first()
+                if order:
+                    print(f"✅ Orden encontrada después de desencriptar: {decrypted_id}")
+            else:
+                print("❌ No se pudo desencriptar el ID")
+        
+        if not order:
+            print("❌ No se encontró la orden con ninguna estrategia")
+            
+            # Mostrar algunos IDs de ejemplo para debugging
+            sample_orders = Order.query.limit(3).all()
+            print("📋 Ejemplos de IDs en la BD:")
+            for o in sample_orders:
+                id_str = str(o.id)
+                print(f"  - ID completo: '{id_str}'")
+                print(f"    Primeros 8 chars: '{id_str[:8]}' (para tracking)")
+                
+                # Intentar encriptar este ID para ver qué queda
+                try:
+                    key = base64.urlsafe_b64encode(app.config['SECRET_KEY'].ljust(32)[:32].encode())
+                    cipher = Fernet(key)
+                    encrypted = cipher.encrypt(id_str.encode()).decode()
+                    print(f"    🔐 ID encriptado: {encrypted[:20]}...")
+                except:
+                    pass
+            
+            return jsonify({
+                "status": "error",
+                "message": "No se encontró ninguna orden con ese número de seguimiento",
+                "tip": f"Prueba usando los primeros 8 caracteres del ID: 'xxxxxxx'"
+            }), 404
+        
+        # Obtener información del usuario
+        user = User.query.get(order.user_id)
+        
+        # Obtener detalles de la orden
+        order_details = []
+        for detalle in order.detalles:
+            product = Product.query.get(detalle.product_id)
+            if product:
+                order_details.append({
+                    "producto": product.nombre,
+                    "cantidad": detalle.cantidad,
+                    "precio_unitario": float(detalle.precio_unitario),
+                    "subtotal": float(detalle.subtotal),
+                    "imagen": product.imagen_url
+                })
+            else:
+                order_details.append({
+                    "producto": "Producto no disponible",
+                    "cantidad": detalle.cantidad,
+                    "precio_unitario": float(detalle.precio_unitario),
+                    "subtotal": float(detalle.subtotal),
+                    "imagen": None
+                })
+        
+        # Obtener el ID corto (primeros 8 caracteres)
+        order_id_full = str(order.id)
+        order_id_short = order_id_full[:8]
+        
+        # Formatear la respuesta
+        response = {
+            "status": "success",
+            "data": {
+                "order_id": order_id_short,  # ← Solo primeros 8 caracteres
+                "order_id_full": order_id_full,  # ← ID completo para referencia
+                "numero_seguimiento": order_id_short,  # ← Igual que order_id
+                "estado": order.estado,
+                "estado_detallado": get_order_status_details(order.estado),
+                "total": float(order.total),
+                "metodo_pago": order.metodo_pago,
+                "fecha_creacion": order.creado_en.isoformat() if order.creado_en else None,
+                "cliente": {
+                    "nombre": f"{user.Nombre} {user.Apellido}" if user else "Cliente no encontrado",
+                    "email": user.Email if user else None
+                },
+                "detalles": order_details,
+                "progreso": get_order_progress(order.estado),
+                "mensaje_estado": get_status_message(order.estado),
+                "nota_importante": f"Tu número de seguimiento es: #{order_id_short}"
+            }
+        }
+        
+        return jsonify(response), 200
+        
+    except Exception as e:
+        print(f"❌ Error en seguimiento: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "status": "error",
+            "message": "Error al consultar el estado del paquete"
+        }), 500
+    # =====================================
+# ENDPOINT PARA DEBUGGING DE ENCRIPTACIÓN
+# =====================================
+
+@app.route("/api/debug/encrypt-test", methods=["GET"])
+def debug_encrypt_test():
+    """
+    Endpoint para probar la encriptación/desencriptación
+    """
+    try:
+        # Obtener una orden de ejemplo
+        order = Order.query.first()
+        if not order:
+            return jsonify({"status": "error", "message": "No hay órdenes en la BD"}), 404
+        
+        original_id = str(order.id)
+        
+        # Encriptar el ID
+        key = base64.urlsafe_b64encode(app.config['SECRET_KEY'].ljust(32)[:32].encode())
+        cipher = Fernet(key)
+        encrypted_id = cipher.encrypt(original_id.encode()).decode()
+        
+        # Desencriptar el ID
+        decrypted_id = decrypt_id(encrypted_id)
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "original_id": original_id,
+                "encrypted_id": encrypted_id,
+                "decrypted_id": decrypted_id,
+                "match": original_id == decrypted_id,
+                "encryption_key": app.config['SECRET_KEY'],
+                "key_length": len(app.config['SECRET_KEY']),
+                "note": "Si 'match' es false, hay un problema con la encriptación"
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@app.route("/api/debug/orders", methods=["GET"])
+def debug_orders():
+    """
+    Endpoint para debugging - muestra todas las órdenes
+    """
+    try:
+        orders = Order.query.order_by(Order.creado_en.desc()).limit(5).all()
+        
+        orders_list = []
+        for order in orders:
+            user = User.query.get(order.user_id)
+            
+            # Encriptar el ID para ver cómo queda
+            key = base64.urlsafe_b64encode(app.config['SECRET_KEY'].ljust(32)[:32].encode())
+            cipher = Fernet(key)
+            encrypted_id = cipher.encrypt(str(order.id).encode()).decode()
+            
+            orders_list.append({
+                "id": order.id,
+                "id_str": str(order.id),
+                "id_type": type(order.id).__name__,
+                "encrypted_id": encrypted_id,
+                "encrypted_short": encrypted_id[:20] + "...",
+                "estado": order.estado,
+                "total": float(order.total),
+                "cliente": f"{user.Nombre} {user.Apellido}" if user else "Desconocido",
+                "email": user.Email if user else "Desconocido",
+                "fecha": order.creado_en.strftime("%d/%m/%Y %H:%M") if order.creado_en else None
+            })
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "total_orders": Order.query.count(),
+                "recent_orders": orders_list,
+                "note": "Usa el 'encrypted_id' completo para probar el tracking"
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+# =====================================
+# FUNCIONES AUXILIARES PARA DETECTAR/DESENCRIPTAR
+# =====================================
+
+def is_encrypted_id(tracking_id):
+    """
+    Detecta si un ID está encriptado (basado en patrones comunes)
+    """
+    # Patrones comunes de IDs encriptados:
+    # 1. Base64: termina con '=' o tiene longitud específica
+    # 2. Fernet: comienza con 'gAAA' y tiene ~44 caracteres
+    if not tracking_id:
+        return False
+    
+    # Si termina con = (común en base64)
+    if tracking_id.endswith('='):
+        return True
+    
+    # Si tiene longitud específica de Fernet (44 chars)
+    if len(tracking_id) == 44 and tracking_id.startswith('gAAAA'):
+        return True
+    
+    # Si contiene solo caracteres base64
+    import re
+    base64_pattern = re.compile(r'^[A-Za-z0-9+/]+={0,2}$')
+    if base64_pattern.match(tracking_id) and len(tracking_id) > 20:
+        return True
+    
+    return False
+
+def decrypt_id_if_possible(encrypted_id):
+    """
+    Intenta desencriptar un ID si reconoce el formato
+    """
+    try:
+        # Si parece base64 simple
+        if encrypted_id.endswith('='):
+            import base64
+            try:
+                decoded = base64.b64decode(encrypted_id.encode()).decode()
+                print(f"🔓 Base64 decodificado: {decoded}")
+                return decoded
+            except:
+                pass
+        
+        # Si parece Fernet
+        if len(encrypted_id) == 44 and encrypted_id.startswith('gAAAA'):
+            try:
+                from cryptography.fernet import Fernet
+                # Necesitas configurar tu clave de encriptación
+                # key = Fernet.generate_key()  # Debes usar tu clave real
+                # cipher = Fernet(key)
+                # decrypted = cipher.decrypt(encrypted_id.encode()).decode()
+                # return decrypted
+                pass
+            except:
+                pass
+                
+        return None
+    except Exception as e:
+        print(f"❌ Error en desencriptación: {e}")
+        return None
+    
+    # =====================================
+# DESENCRIPTAR ID Y OBTENER ORDEN (PARA FRONTEND)
+# =====================================
+
+def decrypt_order_id(encrypted_id):
+    """
+    Desencripta el ID de la orden (si está encriptado)
+    """
+    try:
+        # Si es un UUID normal, devolverlo tal cual
+        if not encrypted_id or len(encrypted_id) < 32:
+            return encrypted_id
+        
+        # Si parece un ID encriptado con Fernet (44 caracteres)
+        if len(encrypted_id) == 44 and encrypted_id.startswith('gAAAA'):
+            try:
+                from cryptography.fernet import Fernet
+                # Usa tu clave de encriptación - DEBES DEFINIR ESTA CLAVE
+                ENCRYPTION_KEY = b'tu_clave_de_encriptacion_aqui_32_bytes=='
+                cipher = Fernet(ENCRYPTION_KEY)
+                decrypted = cipher.decrypt(encrypted_id.encode()).decode()
+                return decrypted
+            except Exception as e:
+                print(f"❌ Error desencriptando Fernet: {e}")
+                return encrypted_id
+        
+        # Si parece base64
+        try:
+            import base64
+            decoded = base64.b64decode(encrypted_id.encode()).decode()
+            return decoded
+        except:
+            return encrypted_id
+            
+    except Exception as e:
+        print(f"❌ Error en decrypt_order_id: {e}")
+        return encrypted_id
+
+# =====================================
+# OBTENER DETALLES DE ORDEN CON ID ENCRIPTADO
+# =====================================
+@app.route("/orders/encrypted/<string:encrypted_order_id>", methods=["GET"])
+def get_encrypted_order_details(encrypted_order_id):
+    """
+    Endpoint especial para frontend que usa IDs encriptados
+    """
+    try:
+        print(f"🔍 ID encriptado recibido: {encrypted_order_id}")
+        
+        # Intentar desencriptar el ID
+        order_id = decrypt_order_id(encrypted_order_id)
+        print(f"🔓 ID desencriptado: {order_id}")
+        
+        # Obtener la orden
+        order = Order.query.get(order_id)
+        
+        if not order:
+            # Intentar buscar con el ID encriptado directamente
+            order = Order.query.get(encrypted_order_id)
+            if not order:
+                return jsonify({
+                    "status": "error",
+                    "message": "Orden no encontrada"
+                }), 404
+            else:
+                order_id = order.id
+        
+        # Obtener información del usuario
+        user = User.query.get(order.user_id)
+        
+        order_data = {
+            "id": encrypted_order_id,  # Mantener el ID encriptado para el frontend
+            "original_id": order.id,    # ID original para referencia
+            "user_info": {
+                "id": user.id,
+                "nombre": f"{user.Nombre} {user.Apellido}",
+                "email": user.Email,
+                "telefono": user.Telefono
+            },
+            "total": float(order.total),
+            "estado": order.estado,
+            "metodo_pago": order.metodo_pago,
+            "creado_en": order.creado_en.isoformat() if order.creado_en else None,
+            "detalles": []
+        }
+        
+        # Agregar detalles de la orden
+        for detalle in order.detalles:
+            producto = Product.query.get(detalle.product_id)
+            order_data["detalles"].append({
+                "id": detalle.id,
+                "product_id": detalle.product_id,
+                "producto_nombre": producto.nombre if producto else "Producto no disponible",
+                "producto_descripcion": producto.descripcion if producto else None,
+                "producto_imagen": producto.imagen_url if producto else None,
+                "cantidad": detalle.cantidad,
+                "precio_unitario": float(detalle.precio_unitario),
+                "subtotal": float(detalle.subtotal)
+            })
+        
+        return jsonify({
+            "status": "success",
+            "data": order_data
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ Error en get_encrypted_order_details: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": "Error interno del servidor",
+            "details": str(e)
+        }), 500
+    
+@app.route("/api/tracking/email", methods=["POST"])
+def track_by_email():
+    """
+    Buscar órdenes por email del usuario
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'email' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "Se requiere el email"
+            }), 400
+        
+        email = data['email'].strip().lower()
+        
+        # Buscar usuario por email
+        user = User.query.filter(db.func.lower(User.Email) == email).first()
+        
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "No se encontró ningún usuario con ese email"
+            }), 404
+        
+        # Obtener todas las órdenes del usuario
+        orders = Order.query.filter_by(user_id=user.id).order_by(Order.creado_en.desc()).all()
+        
+        if not orders:
+            return jsonify({
+                "status": "success",
+                "message": "El usuario no tiene órdenes registradas",
+                "data": {
+                    "cliente": f"{user.Nombre} {user.Apellido}",
+                    "email": user.Email,
+                    "ordenes": []
+                }
+            }), 200
+        
+        orders_list = []
+        for order in orders:
+            order_summary = {
+                "order_id": order.id,
+                "numero_seguimiento": order.id,
+                "estado": order.estado,
+                "total": float(order.total),
+                "fecha": order.creado_en.isoformat() if order.creado_en else None,
+                "productos_count": len(order.detalles)
+            }
+            orders_list.append(order_summary)
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "cliente": f"{user.Nombre} {user.Apellido}",
+                "email": user.Email,
+                "total_ordenes": len(orders),
+                "ordenes": orders_list
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ Error en búsqueda por email: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": "Error al buscar órdenes por email"
+        }), 500
+
+
+# =====================================
+# FUNCIONES AUXILIARES PARA SEGUIMIENTO
+# =====================================
+
+def get_order_status_details(status):
+    """
+    Devuelve detalles descriptivos para cada estado
+    """
+    status_details = {
+        "Pendiente": {
+            "descripcion": "Tu orden ha sido recibida y está siendo procesada",
+            "icono": "⏳",
+            "color": "warning"
+        },
+        "Confirmado": {
+            "descripcion": "Tu pago ha sido confirmado y estamos preparando tu pedido",
+            "icono": "✅",
+            "color": "info"
+        },
+        "En preparación": {
+            "descripcion": "Tu pedido está siendo empaquetado y preparado para envío",
+            "icono": "📦",
+            "color": "info"
+        },
+        "Enviado": {
+            "descripcion": "¡Tu pedido está en camino! Ha sido entregado al transportista",
+            "icono": "🚚",
+            "color": "primary"
+        },
+        "Entregado": {
+            "descripcion": "¡Pedido entregado! Esperamos que disfrutes tu compra",
+            "icono": "🏠",
+            "color": "success"
+        },
+        "Cancelado": {
+            "descripcion": "Esta orden ha sido cancelada",
+            "icono": "❌",
+            "color": "danger"
+        }
+    }
+    
+    return status_details.get(status, {
+        "descripcion": "Estado no definido",
+        "icono": "❓",
+        "color": "secondary"
+    })
+
+
+def get_order_progress(status):
+    """
+    Devuelve el progreso de la orden como porcentaje
+    """
+    progress_map = {
+        "Pendiente": 25,
+        "Confirmado": 40,
+        "En preparación": 60,
+        "Enviado": 80,
+        "Entregado": 100,
+        "Cancelado": 0
+    }
+    
+    return progress_map.get(status, 0)
+
+
+def get_status_message(status):
+    """
+    Devuelve un mensaje amigable según el estado
+    """
+    messages = {
+        "Pendiente": "Estamos procesando tu pedido. Te notificaremos cuando sea confirmado.",
+        "Confirmado": "¡Excelente! Tu pago ha sido verificado. Pronto comenzaremos a preparar tu pedido.",
+        "En preparación": "Tu pedido está siendo cuidadosamente empaquetado por nuestro equipo.",
+        "Enviado": "¡Tu paquete está en camino! Puedes seguir el envío con el transportista.",
+        "Entregado": "¡Pedido entregado exitosamente! Gracias por confiar en Fashion Luxt.",
+        "Cancelado": "Esta orden ha sido cancelada. Para más información, contacta a servicio al cliente."
+    }
+    
+    return messages.get(status, "Estado no reconocido.")
+
+
+# =====================================
+# ENDPOINT PARA ACTUALIZAR ESTADO (ADMIN) - NUEVO NOMBRE
+# =====================================
+
+@app.route("/api/orders/<order_id>/update-tracking-status", methods=["PUT"])  # NOMBRE ÚNICO
+def update_tracking_order_status(order_id):  # NOMBRE ÚNICO
+    """
+    Endpoint para que los administradores actualicen el estado de una orden
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'estado' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "Se requiere el nuevo estado"
+            }), 400
+        
+        nuevo_estado = data['estado']
+        notas = data.get('notas', '')
+        
+        # Estados válidos
+        estados_validos = ['Pendiente', 'Confirmado', 'En preparación', 'Enviado', 'Entregado', 'Cancelado']
+        
+        if nuevo_estado not in estados_validos:
+            return jsonify({
+                "status": "error",
+                "message": f"Estado no válido. Estados permitidos: {', '.join(estados_validos)}"
+            }), 400
+        
+        # Buscar la orden
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({
+                "status": "error",
+                "message": "Orden no encontrada"
+            }), 404
+        
+        # Guardar el estado anterior
+        estado_anterior = order.estado
+        
+        # Actualizar estado
+        order.estado = nuevo_estado
+        
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Estado actualizado de '{estado_anterior}' a '{nuevo_estado}'",
+            "data": {
+                "order_id": order.id,
+                "nuevo_estado": nuevo_estado,
+                "estado_anterior": estado_anterior,
+                "actualizado_en": datetime.utcnow().isoformat()
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error actualizando estado: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": "Error al actualizar el estado de la orden"
+        }), 500
+
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import os
+
+@app.route("/api/contact/email", methods=["POST"])
+def contact_email():
+    """
+    Endpoint para recibir consultas por email y enviarlas a tu correo
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No se recibieron datos"
+            }), 400
+        
+        # Validar campos
+        required_fields = ['name', 'email', 'subject', 'message']
+        for field in required_fields:
+            if field not in data or not data[field].strip():
+                return jsonify({
+                    "status": "error",
+                    "message": f"El campo '{field}' es requerido"
+                }), 400
+        
+        # ============================================
+        # CONFIGURACIÓN DEL EMAIL - ¡CAMBIA ESTO!
+        # ============================================
+        
+        # 1. TU EMAIL DE RECEPCIÓN (donde quieres recibir las consultas)
+        TU_EMAIL = "integradoratiendaropa@gmail.com"  # ¡CAMBIA ESTO!
+        
+        # 2. Configuración SMTP (para Gmail)
+        SMTP_SERVER = "integradoratiendaropa@gmail.com"
+        SMTP_PORT = 587
+        SMTP_USERNAME = "integradoratiendaropa@gmail.com"  # ¡CAMBIA ESTO!
+        SMTP_PASSWORD = "tucontraseña"       # ¡CAMBIA ESTO!
+        
+        # 3. Crear el mensaje de email
+        mensaje = MIMEMultipart()
+        mensaje['From'] = SMTP_USERNAME
+        mensaje['To'] = TU_EMAIL
+        mensaje['Subject'] = f"[Fashion Luxt] Nueva consulta: {data['subject']}"
+        
+        # 4. Contenido del email
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                <h2 style="color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">
+                    🛍️ Nueva Consulta - Fashion Luxt
+                </h2>
+                
+                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                    <h3 style="color: #555;">📋 Información del Cliente</h3>
+                    <p><strong>👤 Nombre:</strong> {data['name']}</p>
+                    <p><strong>📧 Email:</strong> {data['email']}</p>
+                    <p><strong>📅 Fecha:</strong> {data.get('timestamp', 'No especificada')}</p>
+                </div>
+                
+                <div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                    <h3 style="color: #555;">📝 Asunto</h3>
+                    <p>{data['subject']}</p>
+                </div>
+                
+                <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                    <h3 style="color: #555;">💬 Mensaje</h3>
+                    <p style="white-space: pre-line;">{data['message']}</p>
+                </div>
+                
+                <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #eee; font-size: 12px; color: #777;">
+                    <p>📱 <strong>Responder a:</strong> <a href="mailto:{data['email']}">{data['email']}</a></p>
+                    <p>🕐 <strong>Recibido:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        mensaje.attach(MIMEText(html_content, 'html'))
+        
+        # 5. Enviar el email
+        try:
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                server.starttls()
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                server.send_message(mensaje)
+                
+            print(f"✅ Email enviado a {TU_EMAIL}")
+            print(f"   De: {data['name']} <{data['email']}>")
+            print(f"   Asunto: {data['subject']}")
+            
+        except Exception as e:
+            print(f"❌ Error al enviar email: {str(e)}")
+            # Si falla el envío, al menos imprimir en consola
+            print(f"📧 CONSULTA RECIBIDA (no enviada por email):")
+            print(f"   Nombre: {data['name']}")
+            print(f"   Email: {data['email']}")
+            print(f"   Asunto: {data['subject']}")
+            print(f"   Mensaje: {data['message']}")
+        
+        # ============================================
+        # FIN DE CONFIGURACIÓN
+        # ============================================
+        
+        return jsonify({
+            "status": "success",
+            "message": "Consulta recibida exitosamente",
+            "data": {
+                "name": data['name'],
+                "email": data['email'],
+                "subject": data['subject']
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ Error en contacto por email: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": "Error al procesar la consulta"
+        }), 500
+
 # EJECUCIÓN
 # =====================================
 if __name__ == "__main__":

@@ -4,13 +4,54 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Header } from "../../Layout/header/Header";
 import { Footer } from "../../Layout/footer/Footer";
 import { FloatingWhatsApp } from "../../FloatingWhatsApp/FloatingWhatsApp";
-import axios from "axios";
 import styles from "./OrderDetails.module.css";
 
 const apiService = {
   async getOrderDetails(orderId) {
     try {
-      const response = await fetch(`http://localhost:5000/orders/${orderId}`);
+      console.log(`🔍 Obteniendo detalles para ID: ${orderId}`);
+      console.log(`📏 Longitud del ID: ${orderId.length}`);
+      
+      // Detectar si el ID parece encriptado
+      // Los IDs encriptados de Fernet generalmente:
+      // - Tienen 44 caracteres
+      // - Comienzan con 'gAAAA'
+      // - Contienen solo caracteres base64
+      const isLikelyEncrypted = orderId.length === 44 && orderId.startsWith('gAAAA');
+      
+      let url;
+      if (isLikelyEncrypted) {
+        console.log('🔐 ID parece encriptado, usando endpoint especial');
+        // Usar el endpoint que maneja IDs encriptados
+        url = `http://localhost:5000/orders/encrypted/${encodeURIComponent(orderId)}`;
+      } else {
+        console.log('📋 ID parece normal');
+        // Usar el endpoint normal
+        url = `http://localhost:5000/orders/${orderId}`;
+      }
+      
+      console.log(`📡 Llamando a: ${url}`);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        // Si falla con el endpoint especial, intentar con el normal
+        if (isLikelyEncrypted) {
+          console.log('⚠️ Falló con endpoint encriptado, intentando con normal...');
+          const normalUrl = `http://localhost:5000/orders/${orderId}`;
+          const normalResponse = await fetch(normalUrl);
+          
+          if (!normalResponse.ok) {
+            throw new Error(`HTTP error! status: ${normalResponse.status}`);
+          }
+          
+          const data = await normalResponse.json();
+          return data;
+        } else {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      }
+      
       const data = await response.json();
       return data;
     } catch (error) {
@@ -26,10 +67,9 @@ export default function OrderDetails() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showReceipt, setShowReceipt] = useState(false);
   const receiptRef = useRef();
 
-  // Definir los pasos del proceso - ACTUALIZADO para coincidir con tu API
+  // Definir los pasos del proceso
   const orderSteps = [
     { id: 1, name: "Pendiente", description: "Pedido recibido y en espera de confirmación", icon: "fas fa-clock" },
     { id: 2, name: "Confirmado", description: "Pedido confirmado y validado", icon: "fas fa-check-circle" },
@@ -38,7 +78,7 @@ export default function OrderDetails() {
     { id: 5, name: "Entregado", description: "Pedido entregado satisfactoriamente", icon: "fas fa-home" }
   ];
 
-  // Mapeo de estados a pasos - ACTUALIZADO para coincidir con tu API
+  // Mapeo de estados a pasos
   const getCurrentStep = (status) => {
     console.log('Estado recibido desde BD:', status);
     
@@ -52,8 +92,8 @@ export default function OrderDetails() {
       case 'en camino': return 4;
       case 'entregado': 
       case 'completado': return 5;
-      case 'cancelado': return 0; // Estado especial para cancelado
-      default: return 1; // Por defecto, Pendiente
+      case 'cancelado': return 0;
+      default: return 1;
     }
   };
 
@@ -64,17 +104,26 @@ export default function OrderDetails() {
   const fetchOrderDetails = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Iniciando carga de detalles del pedido...');
+      
       const orderDetails = await apiService.getOrderDetails(orderId);
       
       if (orderDetails.status === 'success') {
         setOrder(orderDetails.data);
-        console.log('Datos completos del pedido:', orderDetails.data);
+        console.log('✅ Datos del pedido cargados:', orderDetails.data);
+        
+        // Verificar que el ID del pedido esté correcto
+        if (orderDetails.data.original_id) {
+          console.log(`📝 ID original: ${orderDetails.data.original_id}`);
+          console.log(`🔐 ID encriptado: ${orderDetails.data.id}`);
+        }
       } else {
-        setError('No se pudieron cargar los detalles del pedido');
+        setError(orderDetails.message || 'No se pudieron cargar los detalles del pedido');
+        console.error('❌ Error en respuesta:', orderDetails);
       }
     } catch (err) {
       setError('Error al cargar los detalles del pedido');
-      console.error('Error:', err);
+      console.error('❌ Error en fetchOrderDetails:', err);
     } finally {
       setLoading(false);
     }
@@ -83,47 +132,65 @@ export default function OrderDetails() {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase().trim()) {
       case 'entregado': 
-      case 'completado': return '#10b981'; // Verde
+      case 'completado': return '#10b981';
       case 'enviado': 
-      case 'en camino': return '#3b82f6'; // Azul
+      case 'en camino': return '#3b82f6';
       case 'en preparación': 
       case 'en preparacion': 
-      case 'procesando': return '#f59e0b'; // Amarillo/naranja
-      case 'confirmado': return '#8b5cf6'; // Violeta
-      case 'pendiente': return '#6b7280'; // Gris
-      case 'cancelado': return '#ef4444'; // Rojo
-      default: return '#6b7280'; // Gris por defecto
+      case 'procesando': return '#f59e0b';
+      case 'confirmado': return '#8b5cf6';
+      case 'pendiente': return '#6b7280';
+      case 'cancelado': return '#ef4444';
+      default: return '#6b7280';
     }
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return 'Fecha no disponible';
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return dateString;
+    }
   };
 
   const formatDateForReceipt = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return 'Fecha no disponible';
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formateando fecha para recibo:', error);
+      return dateString;
+    }
   };
 
   const calculateProgress = (status) => {
     const currentStep = getCurrentStep(status);
-    if (currentStep === 0) return 0; // Cancelado
+    if (currentStep === 0) return 0;
     return ((currentStep - 1) / (orderSteps.length - 1)) * 100;
   };
 
   const handlePrintReceipt = () => {
+    if (!order) return;
+    
     const printWindow = window.open('', '_blank');
+    
+    // Usar el ID encriptado o mostrar los primeros 8 caracteres
+    const displayOrderId = order.id ? order.id.substring(0, 8).toUpperCase() : 'N/A';
+    
     const receiptHtml = `
       <!DOCTYPE html>
       <html>
