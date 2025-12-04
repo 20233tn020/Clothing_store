@@ -22,6 +22,101 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+      <style>
+
+        
+/* ====== DIALOGFLOW CUSTOM SKIN — Versión Corporativa ====== */
+
+/* Bubble flotante */
+df-messenger .df-messenger-icon {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+  border-radius: 50% !important;
+  width: 60px !important;
+  height: 60px !important;
+  box-shadow: var(--shadow-lg) !important;
+  border: 3px solid var(--white) !important;
+}
+
+df-messenger .df-messenger-icon:hover {
+  transform: scale(1.05) translateY(-3px);
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary) 100%) !important;
+}
+
+/* Ventana del chat */
+df-messenger {
+  --df-messenger-bot-message: var(--white);
+  --df-messenger-user-message: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  --df-messenger-font-color: var(--text);
+  --df-messenger-user-font-color: var(--white);
+  --df-messenger-send-icon: var(--primary);
+}
+
+df-messenger .df-chat-window {
+  border-radius: var(--border-radius-lg) !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  box-shadow: var(--shadow-lg) !important;
+  overflow: hidden !important;
+}
+
+/* Header */
+df-messenger .df-header {
+  background: linear-gradient(135deg, var(--secondary), var(--secondary-light)) !important;
+  color: var(--white) !important;
+  padding: 18px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.5px;
+}
+
+/* Área de mensajes */
+df-messenger .df-message {
+  background: var(--white) !important;
+  border-radius: 16px !important;
+  padding: 14px 18px !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08) !important;
+}
+
+/* Mensaje del usuario */
+df-messenger .df-message.df-user {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+  color: var(--white) !important;
+  border-bottom-right-radius: 6px !important;
+}
+
+/* Mensaje del bot */
+df-messenger .df-message.df-bot {
+  border-bottom-left-radius: 6px !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+}
+
+/* Input */
+df-messenger .df-input-wrapper {
+  background: var(--white) !important;
+  border-top: 1px solid rgba(0,0,0,0.08) !important;
+}
+
+df-messenger .df-text-input {
+  background: var(--light) !important;
+  border: 1px solid rgba(0,0,0,0.1) !important;
+  border-radius: var(--border-radius) !important;
+  font-size: 14px !important;
+}
+
+df-messenger .df-send-icon {
+  filter: brightness(0.8) sepia(1) hue-rotate(15deg) saturate(4) !important;
+}
+
+/* Scrollbar */
+df-messenger .df-messages::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+df-messenger .df-messages::-webkit-scrollbar-thumb {
+  background: var(--primary) !important;
+  border-radius: 10px !important;
+}
+
+
+      </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Fashion Luxe - Tienda de Ropa</title>
   </head>
@@ -32,6 +127,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
+ 
+<script src="https://www.gstatic.com/dialogflow-console/fast/messenger/bootstrap.js?v=1"></script>
+<!--<df-messenger
+  intent="WELCOME"
+  chat-title="Fashion_Luxt_Support"
+  agent-id="ff904dd2-cedd-4ad4-aeba-d2795d96aa70"
+  language-code="es"
+></df-messenger>-->
 </body>
 </html>

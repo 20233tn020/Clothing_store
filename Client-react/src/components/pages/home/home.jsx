@@ -401,7 +401,7 @@ export default function Home() {
       </section>
       
       <Footer/>
-      <FloatingWhatsApp/>
+    <FloatingWhatsApp/>
     </>
   )
 }
